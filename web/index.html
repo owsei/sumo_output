@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cesium Bounding Box to FastAPI</title>
+
+     <!--CESIUM-->
+    <script src="https://unpkg.com/cesium@latest/Build/Cesium/Cesium.js"></script>
+    <link href="https://cesium.com/downloads/cesiumjs/releases/1.129/Build/Cesium/Widgets/widgets.css" rel="stylesheet">
+
+    <!--BOOTSTRAP-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <link rel="stylesheet" href="styles/styles.css"></script>
+
+</head>
+
+<body>
+    <div>
+        <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="#">SUMO</a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navbarNavDropdown">
+                <ul class="navbar-nav">
+                    <li class="nav-item">
+                        <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsWebsocket()" aria-disabled="true"> Descargar carreteras</a>
+                    </li>
+                    <li class="nav-item">
+                        <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsSanchoElFuerte()" aria-disabled="true"> Descargar Sancho El Fuerte</a>
+                    </li>
+                    <li class="nav-item">
+                        <a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="#" onclick="runSimulationEmissions()" aria-disabled="true"> Crear simulación</a>
+                    </li>
+                    <li class="nav-item">
+                        <a id="getEmissionsCzmlBtn" class="nav-link bi bi-bar-chart" href="#" onclick="cargarEmisionesTemporales()" aria-disabled="true"> Cargar Emisiones</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link bi bi-cpu" href="#" onclick="testConnection()"> Test </a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            Navegar a...
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="#" onclick="toastMessage()"">prueba toast</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="flyToPamplona()"">Pamplona</a></li>
+                            <li><a class="dropdown-item" href="#" onclick="flyToA10()">A10</a></li>
+                            <li><a class="dropdown-item" href="index.html">Cesium</a></li>
+                            <li><a class="dropdown-item" href="index2.html">NOx</a></li>
+                            <li><a class="dropdown-item" href="index3.html">Ocupación vía</a></li>
+                            
+                        </ul>
+                    </li>
+                </ul>
+                </div>
+            </div>
+            </nav>
+    </div>
+
+    <div id="cesiumContainer"></div>
+
+    <div id="spinnerOverlay" class="spinner-overlay">
+        <div class="spinner"></div>
+    </div>
+
+    <!-- Botones de vuelo -->
+    <div id="floatingLayer" class="floating-layer">
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="toggle3DTiles">
+            <label class="form-check-label" for="toggle3DTiles">3D Tiles</label>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="zonaSnachoFuerte">
+            <label class="form-check-label" for="zonaSnachoFuerte">Zona Sancho Fuerte</label>
+        </div>
+        <br/>
+        <text id="num_vehicles_text">Número de vehículos:</text><br/>
+        <input type="number" id="num_vehicles" value=1000><br/>
+        <text id="duration_sec_text">Duración de la simulación: </text><br/>
+        <input type="number" id="duration_sec" value=3600><br/>
+        <text>Paso de la simulacion:</text><br>
+        <div id="step"></div><br>
+        
+
+        <div class="accordion accordion-flush" id="accordionFlushExample">
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-headingOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseInyectorFlujo" aria-expanded="false" aria-controls="flush-collapseInyectorFlujo">
+                   🚗 Inyector de Flujo
+                </button>
+                </h2>
+                <div id="flush-collapseInyectorFlujo" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                    <div class="messages-websocket">
+                        <label>Nº de Vehículos:</label>
+                        <input type="number" id="numberOfCars" value="10" min="1">
+                        <div id="originFlow" class="id-display">Ninguno seleccionado</div>
+                        <div id="destinationFlow" class="id-display">Ninguno seleccionado</div>
+                        <button id="btnLaunchFlow" class="btn btn-primary btn-sm" onclick="injectFlow()">Lanzar Flujo</button>
+                        <div id="flow-status" class="status-msg"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-headingOne">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                    Calles prohibidas
+                </button>
+                </h2>
+                <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body"><div id="forbiddenRoads"></div></div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-headingThree">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree" aria-expanded="false" aria-controls="flush-collapseThree">
+                    Simulación stats
+                </button>
+                </h2>
+                <div id="flush-collapseThree" class="accordion-collapse collapse" aria-labelledby="flush-headingThree" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body"><div id="simulationStats"></div></div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-headingTwo">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
+                    Emisiones por calle
+                </button>
+                </h2>
+                <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body"><div id="emisionesPorCalle"></div></div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-headingFour">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFour" aria-expanded="false" aria-controls="flush-collapseFour">
+                    Reporte final
+                </button>
+                </h2>
+                <div id="flush-collapseFour" class="accordion-collapse collapse" aria-labelledby="flush-headingFour" data-bs-parent="#accordionFlushExample">
+                <div class="accordion-body"><div id="final_report"></div></div>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <h2 class="accordion-header" id="flush-messages">
+                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseMessages" aria-expanded="false" aria-controls="flush-collapseOne">
+                    Mensajes
+                </button>
+                </h2>
+                <div id="flush-collapseMessages" class="accordion-collapse collapse" aria-labelledby="flush-messages" data-bs-parent="#accordionFlushMessages">
+                <div class="accordion-body">
+                    <div class="messages-websocket">
+                        <div id="messages-websocket" style="display:block; color:rgb(235, 9, 46);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+    <script src="./js/sumo.js"></script>
+    <script type="module">
+
+        window.toastEl = document.getElementById('wsToast');
+        window.toastBody = document.getElementById('wsToastBody');
+        window.toast = new bootstrap.Toast(window.toastEl, {
+            delay: 4000 // se cierra solo a los 4 segundos
+        }); 
+
+        //Definicion de variables globales
+        window.googleTileset = null;
+        window.google=false;
+        const pinBuilder = new Cesium.PinBuilder();
+        window.layerFeaturesInMap=[];
+        window.zonaSnachoFuerte = 0;
+
+        window.selectionMode = null; // Puede ser 'origin', 'destination' o null
+        window.selectedOrigin = null;
+        window.selectedDestination = null;
+
+        // window.endPoint= "ws://owsei.ddns.net:8000/"
+        window.endPoint= "http://localhost:8001/"
+        // window.endPointDirecto="ws://localhost:8000/"
+
+        // window.is3D = true;
+        document.getElementById("cesiumContainer").style.display = "block";
+
+        // Inicializar Cesium
+        Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI3YWQ3ZWY4ZS03NzBjLTRjNzktYTYyNy0zMTRkYmE1NmE1NDciLCJpZCI6MjgwODk3LCJpYXQiOjE3NDEwNzIzMzl9.rpQ6pVt0APCbZ_zhTJkhquCVXwmMo3unuk4ZafCea-k'; // Usa tu token de Cesium o deja en blanco si es local
+
+        
+        //Terreno de cesium
+        window.viewer = new Cesium.Viewer("cesiumContainer", {
+            terrain: Cesium.Terrain.fromWorldTerrain({
+            geocoder: true,
+            homeButton: true,
+            sceneModePicker: true,
+            navigationHelpButton: true,
+            navigationInstructionsInitiallyVisible: true,
+            requestRenderMode: true,
+            maximumRenderTimeChange: Infinity,
+            geocoderProvider: Cesium.IonGeocodeProviderType.GOOGLE,
+            shouldAnimate: true
+            }),
+        });
+        window.viewer.scene.globe.enableLighting = true;
+        window.viewer.scene.skyAtmosphere.show = false;
+        window.viewer.infoBox.frame.removeAttribute("sandbox");
+        window.viewer.infoBox.frame.src = "about:blank";
+
+        window.handler = new Cesium.ScreenSpaceEventHandler(window.viewer.scene.canvas);
+        window.handler.setInputAction(function (click) {
+            const cartesian = window.viewer.camera.pickEllipsoid(click.position, window.viewer.scene.globe.ellipsoid);
+            if (!cartesian) return;
+            if (!firstPoint) {
+                // Primer clic: iniciamos el punto
+                firstPointPosition = Cesium.Cartographic.fromCartesian(cartesian);
+                firstPoint = window.viewer.entities.add({
+                    position: firstPointPosition,
+                    point: {
+                        pixelSize: 10,
+                        color: Cesium.Color.BLUE,
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        outline: true,
+                        outlineColor: Cesium.Color.BLUE,
+                        outlineWidth: 2
+                    }
+                });
+                console.log("Primer punto fijado");
+                document.getElementById('getRoadsWebsocketBtn').disabled = true;
+                document.getElementById('simWebsocketBtn').disabled = true;
+            } else {
+                // Segundo clic: finalizamos y calculamos el bounding box
+                secondPointPosition = Cesium.Cartographic.fromCartesian(cartesian);
+                secondPoint = window.viewer.entities.add({
+                    position: secondPointPosition,
+                    point: {
+                        pixelSize: 10,
+                        color: Cesium.Color.BLUE,    
+                        heightReference: Cesium.HeightReference.CLAMP_TO_GROUND,
+                        outline: true,
+                        outlineColor: Cesium.Color.BLUE,
+                        outlineWidth: 2
+                    }
+                });
+
+                bounds = {
+                    west: Math.min(firstPointPosition.longitude, secondPointPosition.longitude),
+                    south: Math.min(firstPointPosition.latitude, secondPointPosition.latitude),
+                    east: Math.max(firstPointPosition.longitude, secondPointPosition.longitude),
+                    north: Math.max(firstPointPosition.latitude, secondPointPosition.latitude)
+                };
+
+                // Dibujar el rectángulo en el mapa
+                if (rectangleEntity) window.viewer.entities.remove(rectangleEntity);
+
+                rectangleEntity = window.viewer.entities.add({
+                    rectangle: {
+                        coordinates: Cesium.Rectangle.fromRadians(bounds.west, bounds.south, bounds.east, bounds.north),
+                        material: Cesium.Color.CYAN.withAlpha(0.4),
+                        outline: true,
+                        outlineColor: Cesium.Color.CYAN
+                    }
+                });
+
+                document.getElementById('getRoadsWebsocketBtn').disabled = false;
+                document.getElementById('simWebsocketBtn').disabled = false;
+
+                firstPoint = null; // Reiniciar para una nueva selección
+                secondPoint = null;
+                firstPointPosition = null;
+                secondPointPosition = null;
+            }
+        }, Cesium.ScreenSpaceEventType.RIGHT_CLICK);
+
+        // 3DTiles checkbox
+        document.getElementById('toggle3DTiles').addEventListener('change', function () {
+            if (this.checked) {
+                mostrar3DTilesGoogle(); // Muestra el tileset
+            } else if (window.googleTileset) {
+                googleTileset.show = false; // Oculta el tileset
+                window.viewer.scene.primitives.remove(googleTileset)
+            }
+        });
+
+        // Zona Snacho Fuerte checkbox
+        document.getElementById('zonaSnachoFuerte').addEventListener('change', function () {
+            if (this.checked) {
+                window.zonaSnachoFuerte = 1;
+                document.getElementById('simWebsocketBtn').disabled = false;
+            } else {
+                window.zonaSnachoFuerte = 0;
+                document.getElementById('simWebsocketBtn').disabled = true;
+            }
+        });
+
+        async function mostrar3DTilesGoogle() {
+            if (!window.google) {
+                window.google = true;
+                try {
+                    let tileset = await Cesium.createGooglePhotorealistic3DTileset();
+                    window.viewer.scene.primitives.add(tileset);
+                    window.googleTileset = tileset;
+                    console.log("Tileset de Google cargado exitosamente.");
+                } catch (error) {
+                    console.error("Error al cargar el tileset de Google:", error);
+                    window.google = false;
+                }
+            } else if (window.googleTileset) {
+                window.googleTileset.show = true;
+            }
+        }
+
+        window.viewer.selectedEntityChanged.addEventListener(function(selectedEntity) {
+            if (!selectedEntity || !selectedEntity.properties) return;
+            let entityId = selectedEntity.properties.id.getValue();
+            let edgeID = selectedEntity.properties.edgeID.getValue();
+            // var entityProhibida = selectedEntity.properties.prohibida.getValue();
+            let entityVelocidadMax = selectedEntity.properties.velocidad_max.getValue();
+            let entityStreetName = selectedEntity.properties.nombre.getValue();
+
+            if (selectedEntity) {
+                setTimeout(function() {
+                    var prohibir_button = window.viewer.infoBox.frame.contentDocument.getElementById("prohibir_"+ entityId);
+                    if (prohibir_button) {
+                        var entity = window.viewer.selectedEntity;
+                        prohibir_button.addEventListener('click', function() {
+                            setForbiddenRoads(entityId,entityStreetName);
+                            // entity.polyline.material = Cesium.Color.RED;
+                            entity.polyline.material = new Cesium.ColorMaterialProperty(Cesium.Color.RED);
+                        });
+                    }
+                    var habilitar_button = window.viewer.infoBox.frame.contentDocument.getElementById("habilitar_"+ entityId);
+                    if (habilitar_button) {
+                        var entity = window.viewer.selectedEntity;
+                        habilitar_button.addEventListener('click', function() {
+                            enableForbiddenRoad(entityId,entityStreetName);
+                            let colorRoad=getVelocityStyle(entityVelocidadMax);
+                            entity.polyline.material = colorRoad
+                        });
+                    }
+                    var origen_button = window.viewer.infoBox.frame.contentDocument.getElementById("origen_"+ edgeID);
+                    if (origen_button) {
+                        var entity = window.viewer.selectedEntity;
+                        origen_button.addEventListener('click', function() {
+                            setOriginFlow(edgeID,entityStreetName);
+                        });
+                    }
+                    var destino_button = window.viewer.infoBox.frame.contentDocument.getElementById("destino_"+ edgeID);
+                    if (destino_button) {
+                        var entity = window.viewer.selectedEntity;
+                        destino_button.addEventListener('click', function() {
+                            setDestinationFlow(edgeID,entityStreetName);
+                        });
+                    }
+                }, 1000);
+            }
+        });
+
+        flyToPamplona()
+
+       
+
+    </script>
+
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="wsToast" class="toast align-items-center text-bg-primary border-0" role="alert">
+            <div class="d-flex">
+            <div class="toast-body" id="wsToastBody">
+                mensaje de prueba
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+</body>
+    
+</html>
