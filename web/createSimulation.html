@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear simulación | SUMO</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body {
+            background: #f8f9fa;
+        }
+        .status-log {
+            background: #0b1727;
+            color: #d2e5ff;
+            border-radius: 0.5rem;
+            min-height: 260px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 0.9rem;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        .status-log .line {
+            margin-bottom: 0.35rem;
+        }
+    </style>
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <main class="container py-4">
+        <div class="row g-4">
+            <div class="col-12 col-lg-7">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white">
+                        <strong><i class="bi bi-car-front-fill me-2"></i>Crear simulación de emisiones</strong>
+                    </div>
+                    <div class="card-body">
+                        <form id="simulationForm" class="row g-3">
+                            <div class="col-12 col-md-6">
+                                <label for="num_vehicles" class="form-label">Número de vehículos</label>
+                                <input type="number" class="form-control" id="num_vehicles" min="1" value="1000" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="duration_sec" class="form-label">Duración (segundos)</label>
+                                <input type="number" class="form-control" id="duration_sec" min="1" value="3600" required>
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="trip_period_sec" class="form-label">Periodo de salida estimado (s)</label>
+                                <input type="number" class="form-control" id="trip_period_sec" min="0.01" step="0.01" value="3.60">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="aggregation_period_sec" class="form-label">Periodo de agregación (s)</label>
+                                <input type="number" class="form-control" id="aggregation_period_sec" min="1" value="60">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="fringe_factor" class="form-label">Factor de salida (`fringe_factor`)</label>
+                                <input type="number" class="form-control" id="fringe_factor" min="1" step="1" value="10">
+                            </div>
+                            <div class="col-12 col-md-6">
+                                <label for="output_factor" class="form-label">Factor de salida de vehículos</label>
+                                <input type="number" class="form-control" id="output_factor" min="0.1" step="0.1" value="1.0">
+                            </div>
+                            <div class="col-12">
+                                <label for="api_base_url" class="form-label">URL base de la API</label>
+                                <input type="url" class="form-control" id="api_base_url" value="http://localhost:8001/">
+                            </div>
+                            <div class="col-12 d-flex gap-2">
+                                <button type="submit" id="runBtn" class="btn btn-primary">
+                                    <i class="bi bi-play-circle me-1"></i>Crear simulación
+                                </button>
+                                <button type="button" id="clearBtn" class="btn btn-outline-secondary">
+                                    <i class="bi bi-eraser me-1"></i>Limpiar log
+                                </button>
+                                <button type="button" id="disconnectBtn" class="btn btn-outline-danger" disabled>
+                                    <i class="bi bi-x-octagon me-1"></i>Desconectar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-lg-5">
+                <div class="card shadow-sm h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <strong>Estado</strong>
+                        <span id="statusBadge" class="badge text-bg-secondary">Desconectado</span>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex align-items-center gap-2 mb-3">
+                            <div id="statusSpinner" class="spinner-border spinner-border-sm text-primary d-none" role="status"></div>
+                            <small id="statusText" class="text-muted">Esperando acción</small>
+                        </div>
+                        <div id="statusLog" class="status-log"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        fetch('./js/navbar.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('navbar-container').innerHTML = data;
+        });
+
+        const form = document.getElementById('simulationForm');
+        const runBtn = document.getElementById('runBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const statusBadge = document.getElementById('statusBadge');
+        const statusText = document.getElementById('statusText');
+        const statusLog = document.getElementById('statusLog');
+        const statusSpinner = document.getElementById('statusSpinner');
+
+        const numVehiclesInput = document.getElementById('num_vehicles');
+        const durationInput = document.getElementById('duration_sec');
+        const tripPeriodInput = document.getElementById('trip_period_sec');
+
+        let socket = null;
+
+        function addLog(message, isError = false) {
+            const div = document.createElement('div');
+            div.className = 'line';
+            const now = new Date().toLocaleTimeString();
+            div.textContent = `[${now}] ${message}`;
+            if (isError) {
+                div.style.color = '#ff8a8a';
+            }
+            statusLog.appendChild(div);
+            statusLog.scrollTop = statusLog.scrollHeight;
+        }
+
+        function updateStatus(label, badgeClass, spinnerVisible) {
+            statusBadge.className = `badge ${badgeClass}`;
+            statusBadge.textContent = label;
+            statusSpinner.classList.toggle('d-none', !spinnerVisible);
+            statusText.textContent = label;
+        }
+
+        function calculateTripPeriod() {
+            const vehicles = Number(numVehiclesInput.value);
+            const duration = Number(durationInput.value);
+            if (!Number.isFinite(vehicles) || vehicles <= 0 || !Number.isFinite(duration) || duration <= 0) {
+                return;
+            }
+            tripPeriodInput.value = (duration / vehicles).toFixed(2);
+        }
+
+        numVehiclesInput.addEventListener('input', calculateTripPeriod);
+        durationInput.addEventListener('input', calculateTripPeriod);
+        calculateTripPeriod();
+
+        clearBtn.addEventListener('click', () => {
+            statusLog.innerHTML = '';
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                socket.close(1000, 'Desconexión manual');
+            }
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            if (socket && socket.readyState === WebSocket.OPEN) {
+                addLog('Ya hay una simulación en curso. Cierra la conexión antes de lanzar otra.', true);
+                return;
+            }
+
+            const apiBaseRaw = document.getElementById('api_base_url').value.trim();
+            const apiBase = apiBaseRaw.endsWith('/') ? apiBaseRaw : `${apiBaseRaw}/`;
+
+            const params = new URLSearchParams({
+                num_vehicles: numVehiclesInput.value,
+                duration_sec: durationInput.value,
+                fringe_factor: document.getElementById('fringe_factor').value,
+                aggregation_period_sec: document.getElementById('aggregation_period_sec').value,
+                output_factor: document.getElementById('output_factor').value,
+                trip_period_sec: tripPeriodInput.value
+            });
+
+            const wsUrl = `${apiBase.replace('http://', 'ws://').replace('https://', 'wss://')}ws/simulationEmissions?${params.toString()}`;
+            addLog(`Abriendo WebSocket: ${wsUrl}`);
+
+            socket = new WebSocket(wsUrl);
+            runBtn.disabled = true;
+            disconnectBtn.disabled = false;
+            updateStatus('Conectando...', 'text-bg-warning', true);
+
+            socket.onopen = () => {
+                updateStatus('Ejecutando', 'text-bg-primary', true);
+                addLog('Conexión establecida. Simulación iniciada.');
+            };
+
+            socket.onmessage = (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.mensaje) {
+                        addLog(data.mensaje);
+                    } else if (data.fin_simulacion) {
+                        addLog(data.fin_simulacion);
+                    } else {
+                        addLog(`Mensaje: ${event.data}`);
+                    }
+                } catch {
+                    addLog(`Mensaje sin JSON: ${event.data}`);
+                }
+            };
+
+            socket.onerror = () => {
+                updateStatus('Error', 'text-bg-danger', false);
+                addLog('Error en la conexión WebSocket.', true);
+            };
+
+            socket.onclose = (event) => {
+                if (event.code === 1000) {
+                    updateStatus('Finalizado', 'text-bg-success', false);
+                    addLog('Conexión cerrada correctamente.');
+                } else {
+                    updateStatus('Desconectado', 'text-bg-secondary', false);
+                    addLog(`Conexión cerrada (código ${event.code}).`, true);
+                }
+                runBtn.disabled = false;
+                disconnectBtn.disabled = true;
+            };
+        });
+    </script>
+</body>
+</html>

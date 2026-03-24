@@ -1,12 +1,22 @@
 
 #map {
-    height: 90vh;
+    height: 95vh;
     z-index: 1;
   }
 
+#navbar-container{
+    width: 100%;
+    height: 5vh;
+    margin: 0; 
+    padding: 0; 
+    display: block;
+    z-index: 1;
+}
+
+
 #cesiumContainer {
     width: 100%; 
-    height: 90vh;
+    height: 95vh;
     left:40px ;
     margin: 0; 
     padding: 0; 
@@ -144,23 +154,39 @@
 .spinner-overlay {
     display: none;
     position: fixed;
-    top: 50%; left: 50%;
+    top: 50%; 
+    left: 50%;
     transform: translate(-50%, -50%);
     width: 100%; height: 100%;
     background-color: rgba(0, 0, 0, 0.5);
-    justify-content: center;
-    align-items: center;
+    justify-content: baseline;
+    align-items: end;
     z-index: 9999;
+    color: white;
 }
 
-.spinner {
+.spinner{
+    position: absolute;
+    top: 50%; 
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 50px;
     height: 50px;
-    border: 6px solid #f3f3f3;
-    border-top: 6px solid #3498db;
+    border: 7px solid #f3f3f3;
+    border-top: 7px solid #2581be;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
+
+.text_loading{
+    position: absolute;
+    top: 47%; 
+    left: 52%;
+    /* transform: translate(-50%, -50%); */
+    font-size: 18px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 
 @keyframes spin {
     0% { transform: rotate(0deg); }
@@ -334,7 +360,7 @@
 
 #simulation-clock {
     position: absolute;
-    top: 20px;
+    top: 60px;
     right: 20px;
     z-index: 1000;
     background: rgba(255, 255, 255, 0.9);
@@ -394,6 +420,27 @@
 }
 
 #play-pause-btn.paused {
+    background: #28a745; /* Verde cuando está en pausa para indicar "Reanudar" */
+}
+
+#launch-btn {
+    margin-top: 10px;
+    width: 100%;
+    padding: 8px;
+    background: #007cbf;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+#launch-btn:hover {
+    background: #005a8b;
+}
+
+#launch-btn.paused {
     background: #28a745; /* Verde cuando está en pausa para indicar "Reanudar" */
 }
 

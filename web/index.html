@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cesium Bounding Box to FastAPI</title>
+    <title>SUMO Simulation</title>
 
      <!--CESIUM-->
     <script src="https://unpkg.com/cesium@latest/Build/Cesium/Cesium.js"></script>
@@ -22,54 +22,21 @@
 
 <body>
     <div>
-        <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
-            <div class="container-fluid">
-                <a class="navbar-brand" href="#">SUMO</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="collapse navbar-collapse" id="navbarNavDropdown">
-                <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsWebsocket()" aria-disabled="true"> Descargar carreteras</a>
-                    </li>
-                    <li class="nav-item">
-                        <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsSanchoElFuerte()" aria-disabled="true"> Descargar Sancho El Fuerte</a>
-                    </li>
-                    <li class="nav-item">
-                        <a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="#" onclick="runSimulationEmissions()" aria-disabled="true"> Crear simulación</a>
-                    </li>
-                    <li class="nav-item">
-                        <a id="getEmissionsCzmlBtn" class="nav-link bi bi-bar-chart" href="#" onclick="cargarEmisionesTemporales()" aria-disabled="true"> Cargar Emisiones</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link bi bi-cpu" href="#" onclick="testConnection()"> Test </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                            Navegar a...
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="toastMessage()"">prueba toast</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="flyToPamplona()"">Pamplona</a></li>
-                            <li><a class="dropdown-item" href="#" onclick="flyToA10()">A10</a></li>
-                            <li><a class="dropdown-item" href="index.html">Cesium</a></li>
-                            <li><a class="dropdown-item" href="index2.html">NOx</a></li>
-                            <li><a class="dropdown-item" href="index3.html">Ocupación vía</a></li>
-                            
-                        </ul>
-                    </li>
-                </ul>
+        <div>
+            <div id="navbar-container"></div>
+        </div>
+        <div >
+            <div id="cesiumContainer">
+                <div id="spinnerOverlay" class="spinner-overlay" >
+                    <div class="spinner"></div> <b class="text_loading">Loading...</b>
                 </div>
             </div>
-            </nav>
+        </div>
     </div>
+    
+    
 
-    <div id="cesiumContainer"></div>
-
-    <div id="spinnerOverlay" class="spinner-overlay">
-        <div class="spinner"></div>
-    </div>
+    
 
     <!-- Botones de vuelo -->
     <div id="floatingLayer" class="floating-layer">
@@ -90,82 +57,87 @@
         <div id="step"></div><br>
         
 
-        <div class="accordion accordion-flush" id="accordionFlushExample">
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-headingOne">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseInyectorFlujo" aria-expanded="false" aria-controls="flush-collapseInyectorFlujo">
-                   🚗 Inyector de Flujo
-                </button>
-                </h2>
-                <div id="flush-collapseInyectorFlujo" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
-                    <div class="messages-websocket">
-                        <label>Nº de Vehículos:</label>
-                        <input type="number" id="numberOfCars" value="10" min="1">
-                        <div id="originFlow" class="id-display">Ninguno seleccionado</div>
-                        <div id="destinationFlow" class="id-display">Ninguno seleccionado</div>
-                        <button id="btnLaunchFlow" class="btn btn-primary btn-sm" onclick="injectFlow()">Lanzar Flujo</button>
-                        <div id="flow-status" class="status-msg"></div>
-                    </div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-headingOne">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
-                    Calles prohibidas
-                </button>
-                </h2>
-                <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
-                <div class="accordion-body"><div id="forbiddenRoads"></div></div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-headingThree">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree" aria-expanded="false" aria-controls="flush-collapseThree">
-                    Simulación stats
-                </button>
-                </h2>
-                <div id="flush-collapseThree" class="accordion-collapse collapse" aria-labelledby="flush-headingThree" data-bs-parent="#accordionFlushExample">
-                <div class="accordion-body"><div id="simulationStats"></div></div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-headingTwo">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
-                    Emisiones por calle
-                </button>
-                </h2>
-                <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionFlushExample">
-                <div class="accordion-body"><div id="emisionesPorCalle"></div></div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-headingFour">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFour" aria-expanded="false" aria-controls="flush-collapseFour">
-                    Reporte final
-                </button>
-                </h2>
-                <div id="flush-collapseFour" class="accordion-collapse collapse" aria-labelledby="flush-headingFour" data-bs-parent="#accordionFlushExample">
-                <div class="accordion-body"><div id="final_report"></div></div>
-                </div>
-            </div>
-            <div class="accordion-item">
-                <h2 class="accordion-header" id="flush-messages">
-                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseMessages" aria-expanded="false" aria-controls="flush-collapseOne">
-                    Mensajes
-                </button>
-                </h2>
-                <div id="flush-collapseMessages" class="accordion-collapse collapse" aria-labelledby="flush-messages" data-bs-parent="#accordionFlushMessages">
-                <div class="accordion-body">
-                    <div class="messages-websocket">
-                        <div id="messages-websocket" style="display:block; color:rgb(235, 9, 46);"></div>
-                    </div>
+    <div class="accordion accordion-flush" id="accordionFlushExample">
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseInyectorFlujo" aria-expanded="false" aria-controls="flush-collapseInyectorFlujo">
+                🚗 Inyector de Flujo
+            </button>
+            </h2>
+            <div id="flush-collapseInyectorFlujo" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+                <div class="messages-websocket">
+                    <label>Nº de Vehículos:</label>
+                    <input type="number" id="numberOfCars" value="10" min="1">
+                    <div id="originFlow" class="id-display">Ninguno seleccionado</div>
+                    <div id="destinationFlow" class="id-display">Ninguno seleccionado</div>
+                    <button id="btnLaunchFlow" class="btn btn-primary btn-sm" onclick="injectFlow()">Lanzar Flujo</button>
+                    <div id="flow-status" class="status-msg"></div>
                 </div>
             </div>
         </div>
-        
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-headingOne">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseOne" aria-expanded="false" aria-controls="flush-collapseOne">
+                Calles prohibidas
+            </button>
+            </h2>
+            <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne" data-bs-parent="#accordionFlushExample">
+            <div class="accordion-body"><div id="forbiddenRoads"></div></div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-headingThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseThree" aria-expanded="false" aria-controls="flush-collapseThree">
+                Simulación stats
+            </button>
+            </h2>
+            <div id="flush-collapseThree" class="accordion-collapse collapse" aria-labelledby="flush-headingThree" data-bs-parent="#accordionFlushExample">
+            <div class="accordion-body"><div id="simulationStats"></div></div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-headingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
+                Emisiones por calle
+            </button>
+            </h2>
+            <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo" data-bs-parent="#accordionFlushExample">
+            <div class="accordion-body"><div id="emisionesPorCalle"></div></div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-headingFour">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseFour" aria-expanded="false" aria-controls="flush-collapseFour">
+                Reporte final
+            </button>
+            </h2>
+            <div id="flush-collapseFour" class="accordion-collapse collapse" aria-labelledby="flush-headingFour" data-bs-parent="#accordionFlushExample">
+            <div class="accordion-body"><div id="final_report"></div></div>
+            </div>
+        </div>
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="flush-messages">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#flush-collapseMessages" aria-expanded="false" aria-controls="flush-collapseOne">
+                Mensajes
+            </button>
+            </h2>
+            <div id="flush-collapseMessages" class="accordion-collapse collapse" aria-labelledby="flush-messages" data-bs-parent="#accordionFlushMessages">
+            <div class="accordion-body">
+                <div class="messages-websocket">
+                    <div id="messages-websocket" style="display:block; color:rgb(235, 9, 46);"></div>
+                </div>
+            </div>
+        </div>
     </div>
+</div>
     <script src="./js/sumo.js"></script>
     <script type="module">
+
+        fetch('./js/navbar.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('navbar-container').innerHTML = data;
+        });
 
         window.toastEl = document.getElementById('wsToast');
         window.toastBody = document.getElementById('wsToastBody');
@@ -209,6 +181,7 @@
             shouldAnimate: true
             }),
         });
+        
         window.viewer.scene.globe.enableLighting = true;
         window.viewer.scene.skyAtmosphere.show = false;
         window.viewer.infoBox.frame.removeAttribute("sandbox");

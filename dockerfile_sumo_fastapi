@@ -16,12 +16,17 @@ RUN apt-get install -y nginx
 
 RUN mkdir -p /tmp/output
 
+
 COPY ./red_carreteras/zona-sancho-el-fuerte.net.xml /tmp/zona-sancho-el-fuerte.net.xml
 COPY ./red_carreteras/zona-sancho-el-fuerte.rou.xml /tmp/zona-sancho-el-fuerte.rou.xml
+
+COPY ./red_carreteras/pamplona.net.xml /tmp/pamplona.net.xml
+
 COPY ./red_carreteras/additional.add.xml /tmp/additional.add.xml
 COPY ./red_carreteras/mapa.rou.xml /tmp/mapa.rou.xml
 COPY ./red_carreteras/vehicles.add.xml /tmp/vehicles.add.xml
 COPY ./red_carreteras/simulation.sumocfg /tmp/simulation.sumocfg
+
 COPY ./output/edgeEmissions.parquet /tmp/edgeEmissions.parquet
 COPY ./output/edgeTraffic.parquet /tmp/edgeTraffic.parquet
 
