@@ -11,8 +11,6 @@ RUN echo "SUMO instalado correctamente"
 
 RUN echo "Instalando dependencias de python"
 RUN apt-get install -y python3 python3-pip
-RUN echo "Instalando dependencias de nginx"
-RUN apt-get install -y nginx
 
 RUN mkdir -p /tmp/output
 

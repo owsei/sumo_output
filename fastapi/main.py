@@ -358,7 +358,7 @@ def parse_sumo_emissions_lane(file_path):
 @app.websocket("/ws/simulationEmissions")
 async def simulationEmissions(websocket: WebSocket):
     await websocket.accept()
-    
+
     num_vehicles = websocket.query_params.get("num_vehicles")
     if num_vehicles is None:
         num_vehicles = 1000  # Valor por defecto
@@ -770,6 +770,9 @@ async def websocket_simulation(websocket: WebSocket):
         print("Archivo ROUT creado correctamente", route_file)
         type_vehicles_file=os.path.join(tmpdir,"tipos_vehiculos.add.xml")
         print("Tipos de vehiculos", type_vehicles_file)
+        
+        config_file =os.path.join(tmpdir,"simulation.sumocfg")
+        print("Config file:", config_file)
 
         detalles_viajes = os.path.join(tmpdir, "detalles_viajes.xml")
         print("Archivo detalles_viajes creado correctamente", detalles_viajes)
@@ -1116,24 +1119,6 @@ async def websocket_simulation(websocket: WebSocket):
             await websocket.send_json({"mensaje":"Simulación finalizada correctamente"})
             await websocket.send_json({"simulationState":"0"})
 
-            tree = ET.parse("tripinfo.xml")
-            root = tree.getroot()
-            data = []
-            for trip in root.findall("tripinfo"):
-                data.append({
-                    "id": trip.get("id"),
-                    "duration": float(trip.get("duration")),
-                    "waitingTime": float(trip.get("waitingTime")),
-                    "timeLoss": float(trip.get("timeLoss"))
-                })
-
-            df = pd.DataFrame(data)
-            
-            print("Duración media:", df["duration"].mean())
-            print("Tiempo de espera medio:", df["waitingTime"].mean())
-            await websocket.send_json({"stats":"Duración media:"+ str(df["duration"].mean())})
-            await websocket.send_json({"stats":"Tiempo de espera medio:"+ str(df["waitingTime"].mean())})
-            
             await websocket.close()
             
             
