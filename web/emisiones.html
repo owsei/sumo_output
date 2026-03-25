@@ -21,6 +21,17 @@
 <body>
 
 <div id="simulation-clock">
+    <div>
+        <label class="clock-label" for="pollutant-select">Seleccionar Contaminante:</label>
+        <select class="clock-label" id="pollutant-select">
+            <option value="CO_abs">CO</option>
+            <option value="CO2_abs">CO2</option>
+            <option value="HC_abs">HC</option>
+            <option value="PMx_abs">PMx</option>
+            <option value="NOx_abs" selected>NOx</option>
+            <option value="fuel_abs">Fuel</option>
+        </select>
+    </div>
     <div class="clock-label">Tiempo de Simulación</div>
     <div id="time-display">00:00:00</div>
     <div class="progress-container">
@@ -28,6 +39,8 @@
     </div>
     <button id="play-pause-btn">Pausa</button>
 </div>
+
+
 
 <div>
     <div id="navbar-container"></div>
@@ -48,12 +61,20 @@
     const btn = document.getElementById('play-pause-btn');
     const timeDisplay = document.getElementById('time-display');
     const progressBar = document.getElementById('progress-bar');
+    let selectedPollutant = 'NOx_abs'; // Default
+    let time = 0; // Global time
 
     // Evento Click para el botón
     btn.addEventListener('click', () => {
         isPaused = !isPaused;
         btn.innerText = isPaused ? 'Reanudar' : 'Pausa';
         btn.classList.toggle('paused', isPaused);
+    });
+
+    // Evento para el select de contaminantes
+    document.getElementById('pollutant-select').addEventListener('change', (e) => {
+        selectedPollutant = e.target.value;
+        updateLayer();
     });
 
     window.endPoint= "http://localhost:8001"
@@ -64,6 +85,21 @@
         center: [-1.652673,42.805925],
         zoom: 15
     }));
+
+    function updateLayer() {
+        const timeKey = time.toString();
+        map.setPaintProperty('capa-emissions', 'line-color', [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', timeKey, ['get', `${selectedPollutant}_por_tiempo`]], 0],
+            0, '#F3F4F6', // De 0 a 9.9
+            10, '#34D399', // De 10 a 19.9
+            20, '#FACC15', // De 20 a 29.9
+            30, '#FB923C', // De 30 a 39.9
+            40, '#F87171', // De 40 a 49.9
+            50, '#991B1B'  // 50 o más
+        ]);
+    }
 
     map.on('load', async () => {
         // Llamada al backend de FastAPI
@@ -80,7 +116,7 @@
         });
 
         map.addLayer({
-            id: 'capa-nox_por_tiempo',
+            id: 'capa-emissions',
             type: 'line',
             source: 'sumo-source',
             paint: {
@@ -88,7 +124,7 @@
                 'line-color': [
                     'interpolate',
                     ['linear'],
-                    ['coalesce', ['get', '0', ['get', 'nox_por_tiempo']], 0], // Empezamos en el segundo 0
+                    ['coalesce', ['get', '0', ['get', `${selectedPollutant}_por_tiempo`]], 0], // Empezamos en el segundo 0
                     0, '#F3F4F6', // De 0 a 9.9
                     10, '#34D399', // De 10 a 19.9
                     20, '#FACC15', // De 20 a 29.9
@@ -101,7 +137,6 @@
 
 
         // Lógica de animación (igual que antes)
-        let time = 0;
         setInterval(() => {
             if (isPaused) return;
             time = (time + 10) % 7200;
@@ -110,17 +145,7 @@
             timeDisplay.innerText = formatTime(time);
             const percentage = (time / 7200) * 100;
             progressBar.style.width = `${percentage}%`;
-            map.setPaintProperty('capa-nox_por_tiempo', 'line-color', [
-                'interpolate',
-                ['linear'],
-                ['coalesce', ['get', time.toString(), ['get', 'nox_por_tiempo']], 0],
-                0, '#F3F4F6', // De 0 a 9.9
-                10, '#34D399', // De 10 a 19.9
-                20, '#FACC15', // De 20 a 29.9
-                30, '#FB923C', // De 30 a 39.9
-                40, '#F87171', // De 40 a 49.9
-                50, '#991B1B'  // 50 o más
-            ]);
+            updateLayer();
         }, 500);
 
     });
