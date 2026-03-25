@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
                 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
                     <input>
-                        <net-file value="zona-sancho-el-fuerte.net.xml"/>
+                        <net-file value="pamplona.net.xml"/>
                         <route-files value="C:\Proyectos\twin-sumo-output\red_carreteras\mapa.rou.xml"/>
                         <additional-files value="additional.add.xml"/>
                     </input>

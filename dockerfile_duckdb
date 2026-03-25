@@ -1,0 +1,8 @@
+FROM pgduckdb/pgduckdb:17-main
+
+USER root
+
+RUN echo "Actualizando e instalando postgis"
+RUN apt-get update && apt-get install -y postgresql-17-postgis-3
+
+

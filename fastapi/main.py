@@ -23,6 +23,7 @@ import pandas as pd
 from pathlib import Path
 import pyarrow
 import json
+import psycopg2
 
 # sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
 
@@ -64,7 +65,6 @@ def operative_system_detect():
        ruta_output= r"C:\Proyectos\twin-sumo-output\output"
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
-
 
 async def download_osm_data(bbox: BoundingBox, output_path: str, websocket:WebSocket):
     """Descarga directa de Overpass API para evitar errores de osmGet.py"""
@@ -297,10 +297,7 @@ def convertirTrafficXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interval
         print(f"Error al ejecutar SUMO: {e}")
         raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
 
-
 #---------------------------------------------------------------------------------------------------------
-
-
 @app.get("/")
 async def root():
     return {"status": "ok"}
@@ -323,37 +320,58 @@ def parse_sumo_emissions_edge(file_path):
     data = []
 
     for interval in root.findall('interval'):
+        time_begin=interval.get('begin')
+        time_end=interval.get('end')
         for edge in interval.findall('edge'):
             # Guardamos el ID y la métrica que nos interese (ej. CO2)
             entry = {
+                'time_begin': time_begin,
+                'time_end': time_end,
                 'id': edge.get('id'),
-                'co2': float(edge.get('CO2_abs')),
-                'fuel': float(edge.get('fuel_abs'))
+                'CO_abs': edge.get('CO_abs'),
+                'HC_abs': edge.get('HC_abs'),
+                'NOx_abs': edge.get('NOx_abs'),
+                'PMx_abs': edge.get('PMx_abs'),
+                'CO2_abs': edge.get('CO2_abs'),
+                'fuel_abs': edge.get('fuel_abs'),
+                'CO_normed': edge.get('CO_normed'),
+                'CO2_normed': edge.get('CO2_normed'),
+                'HC_normed': edge.get('HC_normed'),
+                'PMx_normed': edge.get('PMx_normed'),
+                'NOx_normed': edge.get('NOx_normed'),
+                'fuel_normed': edge.get('fuel_normed'),
+                'electricity_normed': edge.get('electricity_normed')
             }
             data.append(entry)
     
     return pd.DataFrame(data)
 
-def parse_sumo_emissions_lane(file_path):
+
+def parse_sumo_traffic_edge(file_path):
     tree = ET.parse(file_path)
     root = tree.getroot()
     data = []
 
     for interval in root.findall('interval'):
         for edge in interval.findall('edge'):
-            for lane in edge.findall('lane'):
-                # Guardamos el ID y la métrica que nos interese (ej. CO2)
-                entry = {
-                    'id': lane.get('id'),
-                    'co2': float(lane.get('CO2_abs')),
-                    'fuel': float(lane.get('fuel_abs'))
+            entry = {
+                'id': edge.get('id'),
+                'density': edge.get('density'),
+                'occupancy': edge.get('occupancy'),
+                'speed': edge.get('speed'),
+                'waiting_time': edge.get('waiting_time'),
+                'time_loss': edge.get('time_loss'),
+                'departed': edge.get('departed'),
+                'arrived': edge.get('arrived'),
+                'entered': edge.get('entered'),
+                'left': edge.get('left'),
+                'lane_changed_from': edge.get('laneChangedFrom'),
+                'lane_changed_to': edge.get('laneChangedTo'),
+                'flow': edge.get('flow')
             }
             data.append(entry)
     
-    return pd.DataFrame(data)
-
 # ******************FIN FUNCIONES DE PARSEO DE LOS RESULTADOS DE EMISIONES DE SUMO**********************#
-
 # RUTA PARA EJECUTAR LA SIMULACION DE SUMO Y OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES
 @app.websocket("/ws/simulationEmissions")
 async def simulationEmissions(websocket: WebSocket):
@@ -370,7 +388,7 @@ async def simulationEmissions(websocket: WebSocket):
     if fringe_factor is None:
         fringe_factor = 10  # Valor por defecto
 
-    await websocket.send_json({"mensaje": "Iniciando simulacion de Sancho el Fuerte.🚩"})
+    await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
@@ -392,10 +410,10 @@ async def simulationEmissions(websocket: WebSocket):
             print("Archivo ROUT creado correctamente", route_file)
 
             if operativeSytemIsLinux==1:
-                net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
+                net_file = "/tmp/pamplona.net.xml"
                 route_file= "/tmp/mapa.rou.xml"
             else:
-                net_file =ruta + r"\zona-sancho-el-fuerte.net.xml"
+                net_file =ruta + r"\pamplona.net.xml"
                 route_file= ruta + r"\mapa.rou.xml"
 
             random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
@@ -431,7 +449,7 @@ async def simulationEmissions(websocket: WebSocket):
                 f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
                 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
                     <input>
-                        <net-file value="zona-sancho-el-fuerte.net.xml"/>
+                        <net-file value="pamplona.net.xml"/>
                         <route-files value="{route_file}"/>
                         <additional-files value="additional.add.xml"/>
                     </input>
@@ -449,7 +467,7 @@ async def simulationEmissions(websocket: WebSocket):
                 sumo = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
                 
             print("Lanzando simulación con SUMO")
-            await websocket.send_json({"mensaje": "Lanzando simulación con SUMO de Sancho el Fuerte.🚀"})
+            await websocket.send_json({"mensaje": "Lanzando simulación con SUMO de Pamplona.🚀"})
             try:
                 subprocess.run([
                         sumo,
@@ -492,7 +510,7 @@ async def simulationEmissions(websocket: WebSocket):
         
         finally:
             print("Finalizada la simulación con SUMO")
-            await websocket.send_json({"fin_simulacion": "Finalizada la simulación con SUMO de Sancho el Fuerte.✅"})
+            await websocket.send_json({"fin_simulacion": "Finalizada la simulación con SUMO de Pamplona.✅"})
 
 @app.websocket("/ws/getRoadsSanchoElFuerte")
 async def getRoadsSanchoElFuerte(websocket: WebSocket):
@@ -632,10 +650,10 @@ def get_emission_data():
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
        ruta_output= r"/tmp/"
-       net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
+       net_file = "/tmp/pamplona.net.xml"
     else:
        ruta_output= r"C:\Proyectos\twin-sumo-output\output"
-       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\zona-sancho-el-fuerte.net.xml"
+       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml"
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)
@@ -681,10 +699,10 @@ def get_traffic_data():
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
        ruta_output= r"/tmp/"
-       net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
+       net_file = "/tmp/pamplona.net.xml"
     else:
        ruta_output= r"C:\Proyectos\twin-sumo-output\output"
-       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\zona-sancho-el-fuerte.net.xml"
+       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml"
 
 
 
@@ -1305,3 +1323,38 @@ async def get_roads_websocket(websocket: WebSocket):
         finally:
             await websocket.send_json({"mensaje": "Descarga de carreteras finalizada 👍"})
             await websocket.close()
+
+@app.get("/callesPamplona")
+async def get_calles_geojson():
+    # Esta query de PostGIS es la forma más rápida de generar un GeoJSON
+    query = """
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         id,
+            'max_speed', velocidad,
+            'geometry',   ST_AsGeoJSON(geom)::jsonb,
+            'properties', jsonb_build_object(
+                'id', id,
+                'max_speed', velocidad,
+                'length', longitud,
+                'name', edge_name
+            )
+          ) AS feature
+          FROM calles_pamplona
+        ) AS features;
+    """
+    print("Ejecutando query para obtener calles de Pamplona en GeoJSON")
+    print("Query:", query)
+    # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
+    conn = psycopg2.connect("host=localhost port=5432 dbname=sumo user=admin password=admin")
+    cur = conn.cursor()
+    cur.execute(query)
+    resultado = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return resultado
