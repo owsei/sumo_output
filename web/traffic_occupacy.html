@@ -19,6 +19,16 @@
 
 
 <div id="simulation-clock">
+    <div class="clock-label">
+        <label for="metric-select">Seleccionar Métrica:</label>
+        <select id="metric-select">
+            <option value="density">Density</option>
+            <option value="occupancy" selected>Occupancy</option>
+            <option value="speed">Speed</option>
+            <option value="flow">Flow</option>
+            <option value="waitingTime">Waiting Time</option>
+        </select>
+    </div>
     <div class="clock-label">Tiempo de Simulación</div>
     <div id="time-display">00:00:00</div>
     <div class="progress-container">
@@ -27,6 +37,8 @@
     <button id="launch-btn">Iniciar</button>
     <button id="play-pause-btn">Pausa</button>
 </div>
+
+
 
 <div>
     <div id="navbar-container"></div>
@@ -50,12 +62,20 @@
     const timeDisplay = document.getElementById('time-display');
     const progressBar = document.getElementById('progress-bar');
     const dark_light = document.getElementById('dark_light');
-    
+    let selectedMetric = 'occupancy'; // Default
+    let time = 0; // Global time
+
     // Evento Click para el botón
     btn.addEventListener('click', () => {
         window.isPaused = !window.isPaused;
         btn.innerText = window.isPaused ? 'Reanudar' : 'Pausa';
         btn.classList.toggle('paused', window.isPaused);
+    });
+
+    // Evento para el select de métricas
+    document.getElementById('metric-select').addEventListener('change', (e) => {
+        selectedMetric = e.target.value;
+        updateLayer();
     });
 
     btnLaunch.addEventListener('click', () => {
@@ -74,7 +94,23 @@
         zoom: 15
     }));
 
-
+    function updateLayer() {
+        const timeKey = time.toString();
+        map.setPaintProperty('capa-traffic', 'line-color', [
+            'interpolate',
+            ['linear'],
+            ['coalesce', 
+                ['to-number', ['get', timeKey, ['get', `${selectedMetric}_por_tiempo`]]], 
+                0 // Si no hay datos en ese segundo, usamos 0 (Gris claro)
+            ],
+            0,  '#F3F4F6', // Vacío - Gris muy claro
+            2,  '#34D399', // Fluido - Verde
+            5,  '#FACC15', // Lento - Amarillo
+            10, '#FB923C', // Denso - Naranja
+            15, '#F87171', // Atasco - Rojo
+            20, '#991B1B'  // Saturado - Granate
+        ]);
+    }
 
     async function cargarDatos(endPoint)   {
 
@@ -89,7 +125,7 @@
                 });
 
                 map.addLayer({
-                    id: 'capa-occupacy',
+                    id: 'capa-traffic',
                     type: 'line',
                     source: 'sumo-source',
                     paint: {
@@ -97,7 +133,7 @@
                         'line-color': [
                             'interpolate',
                             ['linear'],
-                            ['coalesce', ['get', '0', ['get', 'occupancy_por_tiempo']], 0], // Empezamos en el segundo 0
+                            ['coalesce', ['get', '0', ['get', `${selectedMetric}_por_tiempo`]], 0], // Empezamos en el segundo 0
                             0, '#F3F4F6', // De 0 a 9.9
                             1, '#34D399', // De 10 a 19.9
                             2, '#FACC15', // De 20 a 29.9
@@ -126,7 +162,6 @@
 
     function lanzarAnimacion() {
         // Lógica de animación (igual que antes)
-        let time = 0;
         setInterval(() => {
             if (window.isPaused) return;
             time = (time + 10) % 7200;
@@ -135,21 +170,7 @@
             timeDisplay.innerText = formatTime(time);
             const percentage = (time / 7200) * 100;
             progressBar.style.width = `${percentage}%`;
-            map.setPaintProperty('capa-occupacy', 'line-color', [
-                'interpolate',
-                ['linear'],
-                // LEEMOS LA PROPIEDAD DINÁMICA: timeKey en lugar de '0'
-                ['coalesce', 
-                    ['to-number', ['get', timeKey, ['get', 'occupancy_por_tiempo']]], 
-                    0 // Si no hay datos en ese segundo, usamos 0 (Gris claro)
-                ],
-                0,  '#F3F4F6', // Vacío - Gris muy claro
-                2,  '#34D399', // Fluido - Verde
-                5,  '#FACC15', // Lento - Amarillo
-                10, '#FB923C', // Denso - Naranja
-                15, '#F87171', // Atasco - Rojo
-                20, '#991B1B'  // Saturado - Granate
-            ]);
+            updateLayer();
         }, 500);
     }
 

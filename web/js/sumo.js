@@ -710,36 +710,6 @@
         }
 
 
-        async function cargarEmisionesTemporales() {
-           
-            try {
-                const response = await fetch(window.endPoint+'getCzmlEmissions');
-                if (!response.ok) throw new Error("Error en la petición");
-                
-                
-                const czmlData = await response.json();
-
-                // Cargamos los datos en el viewer
-                const dataSource = await window.viewer.dataSources.add(
-                    Cesium.CzmlDataSource.load(czmlData)
-                );
-
-                // Opcional: Zoom automático a las emisiones cargadas
-                viewer.zoomTo(dataSource);
-                window.viewer.clock.shouldAnimate = true;
-                
-                console.log("Emisiones cargadas correctamente");
-            } catch (error) {
-                window.viewer.clock.shouldAnimate = false;
-                console.error("Error cargando CZML desde FastAPI:", error);
-            }
-            
-            // Opcional: que el reloj empiece a andar solo
-            // window.viewer.clock.shouldAnimate = true;
-        }
-
-        
-
         function testConnection(){
             socket = new WebSocket(window.endPoint + 'ws/status');
             document.getElementById('messages-websocket').innerHTML += "Conectando al servidor...<br/>";

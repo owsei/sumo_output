@@ -54,15 +54,22 @@ class  MensajeSocket(BaseModel):
     color: str
     tipo: str
 
+
+class configuracionSumo(BaseModel):
+    num_vehicles: int = 1000
+    duration_sec: int = 3600
+    fringe_factor: int = 10
+
+
 def operative_system_detect():
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
        sumo_home = "/usr/share/sumo"
        ruta_output= r"/tmp/output"
     else:
-       sumo_home = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
-       ruta= r"C:\Proyectos\twin-sumo-output\red_carreteras"
-       ruta_output= r"C:\Proyectos\twin-sumo-output\output"
+       sumo_home = r"D:\Proyectos\01_SUMO"
+       ruta= r"D:\Proyectos\sumo_output\red_carreteras"
+       ruta_output= r"D:\Proyectos\sumo_output\output"
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
 
@@ -395,9 +402,9 @@ async def simulationEmissions(websocket: WebSocket):
        sumo_home = "/usr/share/sumo"
        ruta_output= r"/tmp/"
     else:
-       sumo_home = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
-       ruta= r"C:\Proyectos\twin-sumo-output\red_carreteras"
-       ruta_output= r"C:\Proyectos\twin-sumo-output\output"
+       sumo_home = r"D:\Proyectos\01_SUMO"
+       ruta= r"D:\Proyectos\sumo_output\red_carreteras"
+       ruta_output= r"D:\Proyectos\sumo_output\output"
 
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
 
@@ -521,7 +528,7 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
     if operativeSytemIsLinux==0:
        sumo_home = "/usr/share/sumo"
     else:
-        sumo_home = r"C:\Program Files (x86)\Eclipse\Sumo"
+        sumo_home = r"D:\Proyectos\01_SUMO"
 
     print("Ruta de SUMO encontrada correctamente", sumo_home)
     await websocket.send_json({"mensaje": "Ruta de SUMO encontrada correctamente."+ sumo_home})
@@ -652,25 +659,46 @@ def get_emission_data():
        ruta_output= r"/tmp/"
        net_file = "/tmp/pamplona.net.xml"
     else:
-       ruta_output= r"C:\Proyectos\twin-sumo-output\output"
-       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml"
+       ruta_output= r"D:\Proyectos\sumo_output\output"
+       net_file = r"D:\Proyectos\sumo_output\red_carreteras\pamplona.net.xml"
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)
     df = pd.read_parquet(os.path.join(ruta_output, "edgeEmissions.parquet"))
-    df.sort_values(['interval_begin'])
-    # 3. Pivotar los datos de CO2 como antes
-    df_pivot = df.pivot(index='id', columns='interval_begin', values='NOx_abs')
-    df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+    df.sort_values(['interval_begin'], inplace=True)
+    
+    pollutants = ['CO_abs', 'CO2_abs', 'HC_abs', 'PMx_abs', 'NOx_abs', 'fuel_abs']
+    
+    # Pivot for each pollutant
+    pivots = {}
+    for pollutant in pollutants:
+        df_pivot = df.pivot(index='id', columns='interval_begin', values=pollutant)
+        df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+        pivots[pollutant] = df_pivot
     
 
     # 4. Crear el JSON final con geometría y datos de tráfico
     features = []
 
-    for edge_id, row in df_pivot.iterrows():
+    for edge_id in df['id'].unique():
         edge = net.getEdge(edge_id)
         shape = edge.getShape()
         coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge_id,
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+        
+        for pollutant in pollutants:
+            if edge_id in pivots[pollutant].index:
+                row = pivots[pollutant].loc[edge_id]
+                properties[f"{pollutant}_por_tiempo"] = row.dropna().to_dict()
+            else:
+                properties[f"{pollutant}_por_tiempo"] = {}
 
         feature = {
             "type": "Feature",
@@ -678,14 +706,7 @@ def get_emission_data():
                 "type": "LineString",
                 "coordinates": coords
             },
-            "properties": {
-                "id": edge_id,
-                "nombre": edge.getName() or "Calle sin nombre",
-                "tipo": edge.getType(),
-                "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
-                "carriles": edge.getLaneNumber(),
-                "nox_por_tiempo": row.dropna().to_dict() # Solo tiempos con datos de NOx
-            }
+            "properties": properties
         }
         features.append(feature)
     
@@ -701,25 +722,46 @@ def get_traffic_data():
        ruta_output= r"/tmp/"
        net_file = "/tmp/pamplona.net.xml"
     else:
-       ruta_output= r"C:\Proyectos\twin-sumo-output\output"
-       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml"
-
-
+       ruta_output= r"D:\Proyectos\sumo_output\output"
+       net_file = r"D:\Proyectos\sumo_output\red_carreteras\pamplona.net.xml"
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)
     df = pd.read_parquet(os.path.join(ruta_output, "edgeTraffic.parquet"))
-    # 3. Pivotar los datos de CO2 como antes
-    df_pivot = df.pivot(index='id', columns='interval_begin', values='density')
-    df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+    df.sort_values(['interval_begin'])
+    
+    metrics = ['density', 'occupancy', 'speed', 'flow', 'waitingTime']
+    
+    # Pivot for each metric
+    pivots = {}
+    for metric in metrics:
+        df_pivot = df.pivot(index='id', columns='interval_begin', values=metric)
+        df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+        pivots[metric] = df_pivot
+    
 
     # 4. Crear el JSON final con geometría y datos de tráfico
     features = []
 
-    for edge_id, row in df_pivot.iterrows():
+    for edge_id in df['id'].unique():
         edge = net.getEdge(edge_id)
         shape = edge.getShape()
         coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge_id,
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+        
+        for metric in metrics:
+            if edge_id in pivots[metric].index:
+                row = pivots[metric].loc[edge_id]
+                properties[f"{metric}_por_tiempo"] = row.dropna().to_dict()
+            else:
+                properties[f"{metric}_por_tiempo"] = {}
 
         feature = {
             "type": "Feature",
@@ -727,14 +769,7 @@ def get_traffic_data():
                 "type": "LineString",
                 "coordinates": coords
             },
-            "properties": {
-                "id": edge_id,
-                "nombre": edge.getName() or "Calle sin nombre",
-                "tipo": edge.getType(),
-                "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
-                "carriles": edge.getLaneNumber(),
-                "occupancy_por_tiempo": row.dropna().to_dict() # Solo tiempos con datos de densidad
-            }
+            "properties": properties
         }
         features.append(feature)
     
@@ -773,7 +808,7 @@ async def websocket_simulation(websocket: WebSocket):
     if operativeSytemIsLinux==0:
        sumo_home = "/usr/share/sumo"
     else:
-        sumo_home = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+        sumo_home = r"D:\Proyectos\01_SUMO"
     
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
     await websocket.send_json({"mensaje":"Ruta de SUMO encontrada correctamente"+ sumo_home +"| Operative system:"+platform.system()})
@@ -1166,7 +1201,7 @@ async def get_roads_websocket(websocket: WebSocket):
     sumo_home = os.environ.get("SUMO_HOME")
 
     if not sumo_home:
-        sumo_home = r"C:\Program Files (x86)\Eclipse\Sumo"
+        sumo_home = r"D:\Proyectos\01_SUMO"
 
     print("Ruta de SUMO encontrada correctamente", sumo_home)
     with tempfile.TemporaryDirectory() as tmpdir:

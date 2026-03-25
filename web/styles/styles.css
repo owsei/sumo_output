@@ -258,9 +258,10 @@
 
 #floatingLayer {
     position: absolute;
-    top: 150px;
+    top: 250px;
     right: 10px;
     width: 300px;
+    height: 500px;
     max-height: 90vh; /* Ocupa casi toda la pantalla verticalmente */
     background-color: rgba(255, 255, 255, 0.95); /* Fondo blanco semitransparente */
     color: #333;

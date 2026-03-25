@@ -7,39 +7,46 @@
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNavDropdown">
                 <ul class="navbar-nav">
-                    <li class="nav-item">
-                        <a id="roadWebsocketBtn" class="nav-link bi-sign-intersection-side" href="#" onclick="getRoadsWebsocket()"> Descargar zona</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle  bi bi-bar-chart" href="#" role="button" data-bs-toggle="dropdown" >
+                            Simulacion Traci
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li class="nav-item"><a id="roadWebsocketBtn" class="nav-link bi-sign-intersection-side" href="#" onclick="getRoadsWebsocket()"> Descargar zona</a></li>
+                            <li class="nav-item"><a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="#" onclick="runSimulationTraci()"> Iniciar Simulación</a></li>
+                            <li class="nav-item"><a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" href="#" onclick="getRoadsSanchoElFuerte()"> Descargar Sancho El Fuerte</a></li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="#" onclick="runSimulationTraci()"> Iniciar Simulación</a>
-                    </il>
-                    <li class="nav-item">
-                        <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" href="#" onclick="getRoadsSanchoElFuerte()"> Descargar Sancho El Fuerte</a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle  bi bi-bar-chart" href="#" role="button" data-bs-toggle="dropdown" >
+                            Simulacion Offline
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li class="nav-item"><a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="createSimulation.html" > Crear simulación</a></li>
+                        </ul>
                     </li>
-                    <li class="nav-item">
-                        <a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="createSimulation.html" > Crear simulación</a>
-                    </li>
-                    <li class="nav-item">
-                        <a id="getEmissionsCzmlBtn" class="nav-link bi bi-bar-chart" href="#" onclick="cargarEmisionesTemporales()" > Cargar Emisiones</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link bi bi-cpu" href="#" onclick="testConnection()"> Test </a>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle  bi bi-bar-chart" href="#" role="button" data-bs-toggle="dropdown" >
+                            Resultados
+                        </a>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="emisiones.html">Emisiones</a></li>
+                            <li><a class="dropdown-item" href="traffic_occupacy.html">Ocupación vía</a></li>
+                            <li><a class="dropdown-item" href="calles_pamplona.html">Calles Pamplona</a></li>
+                            
+                        </ul>
                     </li>
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" >
                             Navegar a...
                         </a>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="#" onclick="toastMessage()"">prueba toast</a></li>
                             <li><a class="dropdown-item" href="#" onclick="flyToPamplona()"">Pamplona</a></li>
                             <li><a class="dropdown-item" href="#" onclick="flyToA10()">A10</a></li>
                             <li><a class="dropdown-item" href="index.html">Cesium</a></li>
-                            <li><a class="dropdown-item" href="emisiones.html">NOx</a></li>
-                            <li><a class="dropdown-item" href="traffic_occupacy.html">Ocupación vía</a></li>
-                            <li><a class="dropdown-item" href="calles_pamplona.html">Calles Pamplona</a></li>
-                            
                         </ul>
                     </li>
+                    
                 </ul>
                 </div>
             </div>
