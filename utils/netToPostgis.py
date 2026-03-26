@@ -21,6 +21,10 @@ def net_to_postgres(net_file):
         cur = conn.cursor()
 
         cur.execute("""
+            create extension postgis
+        """)
+        
+        cur.execute("""
             CREATE TABLE IF NOT EXISTS nodos_pamplona (
                 node_id TEXT PRIMARY KEY,
                 tipo_control TEXT,

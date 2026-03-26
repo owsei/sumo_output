@@ -1,20 +1,20 @@
 services:
-  # fastapi:
-  #   hostname: fastapi
-  #   container_name: fastapi
-  #   build:
-  #     context: .
-  #     dockerfile: dockerfile_sumo_fastapi
-  #   environment:
-  #     - SUMO_HOME=/usr/share/sumo
-  #   ports:
-  #     - "8001:8000"
-  #   stdin_open: true
-  #   tty: true
-  #   # volumes:
-  #   #   - ./temp/output:/tmp/output
-  #   networks:
-  #     - sumo_network
+  fastapi:
+    hostname: fastapi
+    container_name: fastapi
+    build:
+      context: .
+      dockerfile: dockerfile_sumo_fastapi
+    environment:
+      - SUMO_HOME=/usr/share/sumo
+    ports:
+      - "8001:8000"
+    stdin_open: true
+    tty: true
+    # volumes:
+    #   - ./temp/output:/tmp/output
+    networks:
+      - sumo_network
   
   nginx_server:
     hostname: nginx
@@ -44,8 +44,10 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./data:/data
+      - ./postgis:/home/postgres/pgdata
       - ./output:/tmp/parquet_files
+    networks:
+      - sumo_network
 
 networks:
   sumo_network:

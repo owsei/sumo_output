@@ -58,10 +58,11 @@
     }));
 
 
-    async function cargarDatosCalles(endPoint)   {
-        mostrarSpinner();
+    async function cargarDatosCarriles(endPoint)   {
         
-        const response = await fetch(endPoint + '/callesPamplona')
+         mostrarSpinner();
+        
+        const response = await fetch(endPoint + '/carrilesPamplona')
         .then(res => {
             if (!res.ok) {
                 throw new Error('Network response was not ok');
@@ -72,19 +73,18 @@
 
             console.log(geojsonData);
             // Añadimos la fuente de datos al mapa
-            map.addSource('calles-pamplona', {
+            map.addSource('carriles-pamplona', {
                 type: 'geojson',
                 data: geojsonData
             });
 
             // Añadimos la capa visual para las calles
             map.addLayer({
-                id: 'capa-calles',
+                id: 'capa-carriles',
                 type: 'line',
-                source: 'calles-pamplona',
+                source: 'carriles-pamplona',
                 paint: {
-                    'line-width': 3,
-                    // Color dinámico según la propiedad 'max_speed' que guardamos
+                    'line-width': 1,
                     'line-color': [
                         'interpolate',
                         ['linear'],
@@ -100,10 +100,8 @@
                         27.78,  '#3BB3C3', // 100 km/h
                         39.44,  '#004EB0'  // 140+ km/h
                     ],
-                    'line-opacity': 0.8
-
+                    'line-opacity': 0.5
                 }
-
             })
             ocultarSpinner();
         })
@@ -112,8 +110,8 @@
                 ocultarSpinner();   
             }); 
         };
-
-    cargarDatosCalles(window.endPoint);
+        
+    cargarDatosCarriles(window.endPoint);
 </script>
 
 

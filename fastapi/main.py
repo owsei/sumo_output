@@ -1386,7 +1386,46 @@ async def get_calles_geojson():
     print("Ejecutando query para obtener calles de Pamplona en GeoJSON")
     print("Query:", query)
     # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
-    conn = psycopg2.connect("host=localhost port=5432 dbname=sumo user=admin password=admin")
+    conn = psycopg2.connect("host=duckdb port=5432 dbname=sumo user=admin password=admin")
+    cur = conn.cursor()
+    cur.execute(query)
+    resultado = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return resultado
+
+
+
+@app.get("/carrilesPamplona")
+async def get_carriles_geojson():
+    # Esta query de PostGIS es la forma más rápida de generar un GeoJSON
+    query = """
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         lane_id,
+            'max_speed', velocidad_max,
+            'geometry',   ST_AsGeoJSON(geom)::jsonb,
+            'properties', jsonb_build_object(
+                'id', lane_id,
+                'index', indice_carril,
+                'max_speed', velocidad_max,
+                'width', ancho,
+                'permission', permisos,
+                'calle_id', edge_id
+            )
+          ) AS feature
+          FROM carriles_pamplona
+        ) AS features;
+    """
+    print("Ejecutando query para obtener carriles de Pamplona en GeoJSON")
+    print("Query:", query)
+    # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
+    conn = psycopg2.connect("host=duckdb port=5432 dbname=sumo user=admin password=admin")
     cur = conn.cursor()
     cur.execute(query)
     resultado = cur.fetchone()[0]
