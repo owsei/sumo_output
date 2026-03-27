@@ -4,13 +4,24 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mi Primer Mapa con MapLibre</title>
-    
+    <!-- MapLibre GL CSS -->
     <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <!-- MapLibre GL Geocoder -->
+    <script src="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.2.0/dist/maplibre-gl-geocoder.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/@maplibre/maplibre-gl-geocoder@1.2.0/dist/maplibre-gl-geocoder.css" type="text/css" />
+    <!-- Mapbox GL Draw -->
+    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.js"></script>
+    <link rel="stylesheet" href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-draw/v1.4.3/mapbox-gl-draw.css" type="text/css" />
+
      <!--BOOTSTRAP-->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    
+
 
     <style>
         body { margin: 0; padding: 0; }
@@ -48,6 +59,9 @@
         <button id="oscuro" type="radio" name="rtoggle" value="oscuro" onclick="flyToA10()">
          A10
         </button>
+        <button id="claro" type="radio" name="rtoggle" value="claro" onclick="flyToMexicoCity()">
+          México
+        </button>
 
     </div>
 
@@ -60,12 +74,15 @@
         const layerList = document.getElementById('menu');
         const inputs = layerList.getElementsByTagName('input');
 
+        // 1. Definimos los estilos disponibles de mapas de fondo (estos son ejemplos, puedes usar cualquier URL de estilo compatible con MapLibre)
         for (const input of inputs) {
             input.onclick = (layer) => {
                 const styleId = layer.target.value;
                 map.setStyle(estilos[styleId]);
             };
         }
+
+        // Definimos los estilos disponibles de mapas de fondo (estos son ejemplos, puedes usar cualquier URL de estilo compatible con MapLibre)
         const estilos = {
             'calles': 'https://demotiles.maplibre.org/style.json',
             'oscuro': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
@@ -89,10 +106,12 @@
             trackUserLocation: true
         }), 'top-right');
 
+        // Ejemplo de un marcador con Popup
         const popup = new maplibregl.Popup({offset: 25}).setText(
             'Marcador Plaza del Castillo, Pamplona'
         );
 
+        // 
         const marker = new maplibregl.Marker({
                 color: "#FF0000", // Color rojo
                 draggable: true   // ¡Puedes arrastrarlo con el ratón!
@@ -101,10 +120,12 @@
             .setPopup(popup)
         .addTo(map);
 
+        // Ejemplo de un segundo marcador
         const popup2 = new maplibregl.Popup({offset: 25}).setText(
             'Marcador Ayuntamiento de Pamplona'
         );
 
+        // Ejemplo de un segundo marcador
         const marker2 = new maplibregl.Marker({
                 color: "#0000FF", // Color azul
                 draggable: true   // ¡Puedes arrastrarlo con el ratón!
@@ -113,6 +134,7 @@
             .setPopup(popup2)
         .addTo(map);
 
+        // Cargamos datos al cargar la página
         map.on('load', () => {
             // 1. Añadimos la FUENTE (los datos)
             map.addSource('puntos-interes', {
@@ -230,10 +252,13 @@
                 'data': 'https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson'
             });
         
-            loadEarthquakeData();
+            // loadEarthquakeData();
+
+            loadEarthquakeHeatmap();
         
         });
 
+        // Función para volar a Pamplona
         function flyToPamplona() {
             map.flyTo({
                 center: [-1.652673,42.816455],
@@ -242,6 +267,7 @@
             });
         }
 
+        // Función para volar a A10 (Navarra)
         function flyToA10() {
             map.flyTo({
                 center: [-1.919479,42.913741], // Coordenadas de París
@@ -250,11 +276,21 @@
             });
         }
 
+        function flyToMexicoCity() {
+            map.flyTo({
+                center: [-94.347433,15.897757], // Coordenadas de Ciudad de México
+                zoom: 9,
+                essential: true
+            });
+        }
+
+        // Función para cargar datos de terremotos y añadir la capa al mapa
         function loadEarthquakeData() {
             map.addLayer({
                 'id': 'capa-terremotos',
                 'type': 'circle',
                 'source': 'terremotos',
+                'minzoom': 7,
                 'paint': {
                     'circle-radius': [
                         'interpolate',
@@ -283,6 +319,60 @@
             });
         }
 
+        function loadEarthquakeHeatmap(){
+            map.addLayer({
+                'id': 'terremotos-heat',
+                'type': 'heatmap',
+                'source': 'terremotos',
+                'maxzoom': 9,
+                'paint': {
+                    // 1. Aumentar el peso del calor según la magnitud del terremoto
+                    'heatmap-weight': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'mag'],
+                        0, 0,
+                        1, 0.2,
+                        6, 2
+                    ],
+                    // 2. Intensidad global (se ajusta según el zoom)
+                    'heatmap-intensity': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        0, 1,
+                        9, 3
+                    ],
+                    // 3. Rampa de colores: 0 es transparente, 1 es el color máximo
+                    'heatmap-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['heatmap-density'],
+                        0, 'rgba(33,102,172,0)',
+                        0.2, 'rgb(103,169,207)',
+                        0.4, 'rgb(209,229,240)',
+                        0.6, 'rgb(253,219,199)',
+                        0.8, 'rgb(239,138,98)',
+                        1, 'rgb(178,24,43)'
+                    ],
+                    // 4. Radio de cada punto de calor (en píxeles)
+                    'heatmap-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['zoom'],
+                        0, 2,
+                        5, 10,
+                        9, 30
+                    ],
+                    // 5. Opacidad de la capa
+                    'heatmap-opacity': 0.7
+                }
+            });
+
+        }
+
+
+        // Función para añadir nuestras capas personalizadas (calles, carriles, semáforos, etc.) después de cada cambio de estilo
         function añadirMisCapas() {
             // Verificamos si la fuente ya existe para no duplicarla
             if (!map.getSource('terremotos')) {
@@ -292,13 +382,45 @@
                 });
                 
                 loadEarthquakeData();
+                loadEarthquakeHeatmap();
             }
         }
 
-
+        // Re-añadimos nuestras capas personalizadas cada vez que se cambie el estilo
         map.on('styledata', () => {
             añadirMisCapas();
         });
+
+
+        const geocoderApi = {
+            forwardGeocode: async (config) => {
+                const features = [];
+                try {
+                    const request = `https://nominatim.openstreetmap.org/search?q=${config.query}&format=geojson&polygon_geojson=1&addressdetails=1`;
+                    const response = await fetch(request);
+                    const geojson = await response.json();
+                    for (const feature of geojson.features) {
+                        const center = [
+                            feature.bbox[0] + (feature.bbox[2] - feature.bbox[0]) / 2,
+                            feature.bbox[1] + (feature.bbox[3] - feature.bbox[1]) / 2
+                        ];
+                        const point = {
+                            type: 'Feature',
+                            geometry: { type: 'Point', coordinates: center },
+                            place_name: feature.properties.display_name,
+                            properties: feature.properties,
+                            text: feature.properties.display_name,
+                            place_type: ['place'],
+                            center: center
+                        };
+                        features.push(point);
+                    }
+                } catch (e) { console.error(`Failed to geocode: ${e}`); }
+                return { features };
+            }
+        };
+
+        map.addControl(new MaplibreGeocoder(geocoderApi, { maplibregl: maplibregl }));
 
     </script>
 </body>
