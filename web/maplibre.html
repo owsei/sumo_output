@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mi Primer Mapa con MapLibre</title>
+    
+    <link href="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.css" rel="stylesheet" />
+     <!--BOOTSTRAP-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { position: absolute; top: 0; bottom: 0; width: 100%; }
+        button {
+            margin: 5px;
+            padding: 4px 10px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        h4 {
+            font-size: 10px;
+            font-weight: bold;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="menu" style="position: absolute; background: white; padding: 10px; z-index: 1; top: 10px; left: 10px; border-radius: 4px; font-family: sans-serif;">
+        <input id="calles" type="radio" name="rtoggle" value="calles" checked>
+        <label for="calles">Calles</label>
+        <input id="oscuro" type="radio" name="rtoggle" value="oscuro">
+        <label for="oscuro">Oscuro</label>
+        <input id="claro" type="radio" name="rtoggle" value="claro">
+        <label for="claro">Claro</label>
+    </div>
+    <div id="menu" style="position: absolute; background: white; padding: 10px; z-index: 1; bottom: 50px; right: 10px; border-radius: 4px; font-family: sans-serif;">
+        <button id="calles" type="radio" name="rtoggle" value="calles" onclick="flyToPamplona()">
+         Pamplona
+        </button>
+        <button id="oscuro" type="radio" name="rtoggle" value="oscuro" onclick="flyToA10()">
+         A10
+        </button>
+
+    </div>
+
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/maplibre-gl@4.0.0/dist/maplibre-gl.js"></script>
+
+    <script>
+
+        const layerList = document.getElementById('menu');
+        const inputs = layerList.getElementsByTagName('input');
+
+        for (const input of inputs) {
+            input.onclick = (layer) => {
+                const styleId = layer.target.value;
+                map.setStyle(estilos[styleId]);
+            };
+        }
+        const estilos = {
+            'calles': 'https://demotiles.maplibre.org/style.json',
+            'oscuro': 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
+            'claro': 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+        };
+
+        // 4. Configuración del mapa
+        const map = new maplibregl.Map({
+            container: 'map', // ID del div
+            style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json', // Estilo por defecto
+            center: [-3.70379, 40.41578], // Longitud, Latitud [Madrid]
+            zoom: 2 // Nivel de zoom inicial
+        });
+
+        // Añade botones de zoom y rotación
+        map.addControl(new maplibregl.NavigationControl(), 'top-right');
+
+        // Añade control de geolocalización (para saber dónde está el usuario)
+        map.addControl(new maplibregl.GeolocateControl({
+            positionOptions: { enableHighAccuracy: true },
+            trackUserLocation: true
+        }), 'top-right');
+
+        const popup = new maplibregl.Popup({offset: 25}).setText(
+            'Marcador Plaza del Castillo, Pamplona'
+        );
+
+        const marker = new maplibregl.Marker({
+                color: "#FF0000", // Color rojo
+                draggable: true   // ¡Puedes arrastrarlo con el ratón!
+            })
+            .setLngLat([-1.642960, 42.816984]) // Coordenadas del marcador [Pamplona]
+            .setPopup(popup)
+        .addTo(map);
+
+        const popup2 = new maplibregl.Popup({offset: 25}).setText(
+            'Marcador Ayuntamiento de Pamplona'
+        );
+
+        const marker2 = new maplibregl.Marker({
+                color: "#0000FF", // Color azul
+                draggable: true   // ¡Puedes arrastrarlo con el ratón!
+            })
+            .setLngLat([-1.644018, 42.818313]) // Coordenadas del marcador [Pamplona]
+            .setPopup(popup2)
+        .addTo(map);
+
+        map.on('load', () => {
+            // 1. Añadimos la FUENTE (los datos)
+            map.addSource('puntos-interes', {
+                'type': 'geojson',
+                'data':
+                    {
+                        'type': 'FeatureCollection',
+                        'features': [
+                            {
+                                'type': 'Feature',
+                                'descripcion': 'Este es un lugar increíble',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-3.70379, 40.41678]
+                                },
+                                'properties': { 'nombre': 'Centro de Madrid','descripcion': 'Este es un lugar increíble' }
+                            },
+                            {
+                                'type': 'Feature',
+                                'descripcion': 'Este es un lugar increíble',
+                                'geometry': {
+                                    'type': 'Point',
+                                    'coordinates': [-3.70379, 40.41658]
+                                },
+                                'properties': { 'nombre': 'Puerta del Sol','descripcion': 'Este es otro lugar increíble' }
+                            }
+                        ]
+                    }
+                
+            });
+
+            // 2. Añadimos la CAPA (el diseño)
+            map.addLayer({
+                'id': 'capa-circulos',
+                'type': 'circle',
+                'source': 'puntos-interes', // Debe coincidir con el ID de la fuente
+                'paint': {
+                    'circle-radius': 10,
+                    'circle-color': '#2ECC71',
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#ffffff'
+                }
+            });
+
+            // Cambiar el cursor a 'pointer' al entrar en la capa
+            map.on('mouseenter', 'capa-circulos', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            // Restaurar el cursor al salir
+            map.on('mouseleave', 'capa-circulos', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // 
+            const popup3 = new maplibregl.Popup({
+                closeButton: false, // Ocultamos el botón 'X' para que sea más limpio
+                closeOnClick: false
+            });
+
+            // 3. Al HACER CLICK en un punto de la capa
+            map.on('mouseenter', 'capa-circulos', (e) => {
+                // 1. Obtener las coordenadas y las propiedades del punto clicado
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const nombre = e.features[0].properties.nombre;
+                const descripcion = e.features[0].properties.descripcion;
+
+                // 2. Crear y mostrar el Popup
+                popup3
+                    .setLngLat(coordinates)
+                    .setHTML(`<h3>Info:</h3><p>${nombre}</p><h3>Descripción:</h3><p>${descripcion}</p>`) // Puedes usar HTML real aquí
+                    .addTo(map);
+            });
+
+            // 3. Al SALIR con el ratón
+            map.on('mouseleave', 'capa-circulos', (e) => {
+                // Restaurar cursor
+                map.getCanvas().style.cursor = '';
+                
+                // ¡Aquí está el truco! Quitamos el popup del mapa
+                popup3.remove();
+            });
+        
+            const popup4 = new maplibregl.Popup({
+                closeButton: false, // Ocultamos el botón 'X' para que sea más limpio
+                closeOnClick: false
+            });
+
+            map.on('mouseenter', 'capa-terremotos', (e) => {
+                // 1. Obtener las coordenadas y las propiedades del punto clicado
+                const coordinates = e.features[0].geometry.coordinates.slice();
+                const id = e.features[0].properties.id;
+                const mag = e.features[0].properties.mag;
+                const time = new Date(e.features[0].properties.time).toLocaleString();
+                const descripcion = e.features[0].properties.descripcion;
+
+                // 2. Crear y mostrar el Popup
+                popup4
+                    .setLngLat(coordinates)
+                    .setHTML(`<h4>ID:</h4><p>${id}</p><h4>Magnitud:</h4><p>${mag}</p><h4>Hora:</h4><p>${time}</p><h4>Descripción:</h4><p>${descripcion}</p>`) // Puedes usar HTML real aquí
+                    .addTo(map);
+            });
+
+            map.on('mouseleave', 'capa-terremotos', (e) => {
+                // Restaurar cursor
+                map.getCanvas().style.cursor = '';
+                
+                // ¡Aquí está el truco! Quitamos el popup del mapa
+                popup4.remove();
+            });
+
+            // Ejemplo de añadir una capa con datos de terremotos (GeoJSON)
+            map.addSource('terremotos', {
+                'type': 'geojson',
+                'data': 'https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson'
+            });
+        
+            loadEarthquakeData();
+        
+        });
+
+        function flyToPamplona() {
+            map.flyTo({
+                center: [-1.652673,42.816455],
+                zoom: 12,
+                essential: true
+            });
+        }
+
+        function flyToA10() {
+            map.flyTo({
+                center: [-1.919479,42.913741], // Coordenadas de París
+                zoom: 12,
+                essential: true
+            });
+        }
+
+        function loadEarthquakeData() {
+            map.addLayer({
+                'id': 'capa-terremotos',
+                'type': 'circle',
+                'source': 'terremotos',
+                'paint': {
+                    'circle-radius': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'mag'], // Obtenemos la propiedad "mag" (magnitud) del GeoJSON
+                        1, 1, // Si la magnitud es 1, el radio es 1px
+                        2, 2,
+                        3, 4,
+                        4, 8,
+                        6, 20           // Si la magnitud es 6, el radio es 20px
+                    ],
+                    'circle-color': [
+                        'interpolate',
+                        ['linear'],
+                        ['get', 'mag'],
+                        1, '#2ECC71', // Verde para magnitudes bajas
+                        3, '#F1C40F', // Amarillo para magnitudes medias
+                        5, '#E67E22', // Naranja para magnitudes altas
+                        7, '#E74C3C',  // Rojo intenso para magnitudes muy altas
+                        10, '#C0392B'  // Rojo oscuro para magnitudes extremas
+
+                    ], // Un rojo intenso
+                    'circle-stroke-width': 1,
+                    'circle-stroke-color': '#fff'
+                }
+            });
+        }
+
+        function añadirMisCapas() {
+            // Verificamos si la fuente ya existe para no duplicarla
+            if (!map.getSource('terremotos')) {
+                map.addSource('terremotos', {
+                    'type': 'geojson',
+                    'data': 'https://maplibre.org/maplibre-gl-js/docs/assets/earthquakes.geojson'
+                });
+                
+                loadEarthquakeData();
+            }
+        }
+
+
+        map.on('styledata', () => {
+            añadirMisCapas();
+        });
+
+    </script>
+</body>
+</html>
