@@ -383,6 +383,12 @@ def parse_sumo_traffic_edge(file_path):
 @app.websocket("/ws/simulationEmissions")
 async def simulationEmissions(websocket: WebSocket):
     await websocket.accept()
+    sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+    sumo_home_linux = "/usr/share/sumo"
+    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
+    ruta_output_linux = r"/tmp/output"
+    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
+    ruta_linux = r"/tmp/"
 
     num_vehicles = websocket.query_params.get("num_vehicles")
     if num_vehicles is None:
@@ -395,16 +401,21 @@ async def simulationEmissions(websocket: WebSocket):
     if fringe_factor is None:
         fringe_factor = 10  # Valor por defecto
 
+    trip_period = websocket.query_params.get("trip_period_sec")
+    if trip_period is None:
+        trip_period = 10  # Valor por defecto
+
     await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
-       sumo_home = "/usr/share/sumo"
-       ruta_output= r"/tmp/"
+       sumo_home = sumo_home_linux
+       ruta_output= ruta_output_linux
+       ruta= ruta_linux
     else:
-       sumo_home = r"D:\Proyectos\01_SUMO"
-       ruta= r"D:\Proyectos\sumo_output\red_carreteras"
-       ruta_output= r"D:\Proyectos\sumo_output\output"
+       sumo_home = sumo_home_windows
+       ruta= ruta_windows
+       ruta_output= ruta_output_windows
 
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
 
@@ -417,11 +428,11 @@ async def simulationEmissions(websocket: WebSocket):
             print("Archivo ROUT creado correctamente", route_file)
 
             if operativeSytemIsLinux==1:
-                net_file = "/tmp/pamplona.net.xml"
-                route_file= "/tmp/mapa.rou.xml"
+                net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+                route_file= os.path.join(ruta_linux, "mapa.rou.xml")
             else:
-                net_file =ruta + r"\pamplona.net.xml"
-                route_file= ruta + r"\mapa.rou.xml"
+                net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+                route_file= os.path.join(ruta_windows, "mapa.rou.xml")
 
             random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
             if operativeSytemIsLinux==1:
@@ -430,7 +441,7 @@ async def simulationEmissions(websocket: WebSocket):
                     "-n", net_file,
                     "-r", route_file,
                     "-e", duration_sec,  # Simular duration_sec segundos de tráfico
-                    "--period", "10", # Aparece un coche cada 0.5 segundos
+                    "--period", trip_period, # Aparece un coche cada trip_period segundos
                     "--fringe-factor", fringe_factor
                 ], check=True)  
             else:
@@ -439,17 +450,17 @@ async def simulationEmissions(websocket: WebSocket):
                     "-n", net_file,
                     "-r", route_file,
                     "-e", duration_sec,  # Simular duration_sec segundos de tráfico
-                    "--period", "10", # Aparece un coche cada 0.5 segundos
+                    "--period", trip_period, # Aparece un coche cada trip_period segundos
                     "--fringe-factor", fringe_factor
                 ], check=True)  
 
             # crea el archivo de configuración SUMO
 
             if operativeSytemIsLinux==1:
-                config_file = "/tmp/simulation.sumocfg"
+                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
             else:
-                config_file = ruta + r"\simulation.sumocfg"
-                route_file = ruta + r"\mapa.rou.xml"
+                config_file = os.path.join(ruta_windows, "simulation.sumocfg")
+                route_file = os.path.join(ruta_windows, "mapa.rou.xml")
                 
             print("Archivo de configuración SUMO creado correctamente", config_file)
             with open(config_file, 'w') as f:
@@ -462,7 +473,7 @@ async def simulationEmissions(websocket: WebSocket):
                     </input>
                     <routing>
                         <device.rerouting.probability value="1.0"/>
-                        <device.rerouting.period value="10"/>
+                        <device.rerouting.period value="0"/>
                     </routing>
                 </configuration>""")
 
@@ -654,13 +665,19 @@ def generar_czml_emisiones():
 
 @app.get("/get-emission-data")
 def get_emission_data():
+    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
+    ruta_output_linux = r"/tmp/"
+    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
+    ruta_linux = r"/tmp/"
+
+
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
-       ruta_output= r"/tmp/"
-       net_file = "/tmp/pamplona.net.xml"
+       ruta_output= ruta_output_linux
+       net_file = os.path.join(ruta_linux, "pamplona.net.xml")
     else:
-       ruta_output= r"D:\Proyectos\sumo_output\output"
-       net_file = r"D:\Proyectos\sumo_output\red_carreteras\pamplona.net.xml"
+       ruta_output= ruta_output_windows
+       net_file = os.path.join(ruta_windows, "pamplona.net.xml")
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)
@@ -717,13 +734,20 @@ def get_emission_data():
 
 @app.get("/get-traffic-data")
 def get_traffic_data():
+
+    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
+    ruta_output_linux = r"/tmp/"
+    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
+    ruta_linux = r"/tmp/"
+
+
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
-       ruta_output= r"/tmp/"
-       net_file = "/tmp/pamplona.net.xml"
+       ruta_output= ruta_output_linux
+       net_file = os.path.join(ruta_linux, "pamplona.net.xml")
     else:
-       ruta_output= r"D:\Proyectos\sumo_output\output"
-       net_file = r"D:\Proyectos\sumo_output\red_carreteras\pamplona.net.xml"
+       ruta_output= ruta_output_windows
+       net_file = os.path.join(ruta_windows, "pamplona.net.xml")
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)
@@ -808,7 +832,7 @@ async def websocket_simulation(websocket: WebSocket):
     if operativeSytemIsLinux==0:
        sumo_home = "/usr/share/sumo"
     else:
-        sumo_home = r"D:\Proyectos\01_SUMO"
+        sumo_home = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
     
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
     await websocket.send_json({"mensaje":"Ruta de SUMO encontrada correctamente"+ sumo_home +"| Operative system:"+platform.system()})
@@ -917,8 +941,12 @@ async def websocket_simulation(websocket: WebSocket):
             print("Creando archivo de configuración SUMO")
             await websocket.send_json({"mensaje":"Creando archivo de configuración SUMO"})
             
+            if operativeSytemIsLinux==0:
+                config_file = "/tmp/simulation.sumocfg"
+            else:
+                config_file = os.path.join(tmpdir, "simulation.sumocfg")
             
-            config_file = os.path.join(tmpdir, "simulation.sumocfg")
+
             print("Archivo de configuración SUMO creado correctamente", config_file)
             await websocket.send_json({"mensaje":"Archivo de configuración SUMO creado correctamente"})
             
@@ -943,9 +971,8 @@ async def websocket_simulation(websocket: WebSocket):
                         </routing>
                     </configuration>""")
 
-            print("Archivos de configuración SUMO generados correctamente")
-            config_file = os.path.join(tmpdir, "simulation.sumocfg")
-        
+            print("Archivo de configuración SUMO generados correctamente")
+
         if zonaSnachoFuerte==1:
             if operativeSytemIsLinux==1:
                 config_file = os.path.join(tmpdir, "simulation.sumocfg")
@@ -1394,8 +1421,6 @@ async def get_calles_geojson():
     conn.close()
     return resultado
 
-
-
 @app.get("/carrilesPamplona")
 async def get_carriles_geojson():
     # Esta query de PostGIS es la forma más rápida de generar un GeoJSON
@@ -1423,6 +1448,39 @@ async def get_carriles_geojson():
         ) AS features;
     """
     print("Ejecutando query para obtener carriles de Pamplona en GeoJSON")
+    print("Query:", query)
+    # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
+    conn = psycopg2.connect("host=duckdb port=5432 dbname=sumo user=admin password=admin")
+    cur = conn.cursor()
+    cur.execute(query)
+    resultado = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return resultado
+
+@app.get("/nodosPamplona")
+async def get_nodos_geojson():
+    # Esta query de PostGIS es la forma más rápida de generar un GeoJSON
+    query = """
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         node_id,
+            'tipo_control', tipo_control,
+            'geometry',   ST_AsGeoJSON(shape)::jsonb,
+            'properties', jsonb_build_object(
+                'id', node_id,
+                'tipo_control', tipo_control
+            )
+          ) AS feature
+          FROM nodos_pamplona
+        ) AS features;
+    """
+    print("Ejecutando query para obtener nodos de Pamplona en GeoJSON")
     print("Query:", query)
     # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
     conn = psycopg2.connect("host=duckdb port=5432 dbname=sumo user=admin password=admin")

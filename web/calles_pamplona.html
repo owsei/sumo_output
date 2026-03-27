@@ -113,7 +113,64 @@
             }); 
         };
 
+    async function cargarNodosPamplona(endPoint) {
+        mostrarSpinner();
+
+        try {
+            const res = await fetch(endPoint + '/nodosPamplona');
+            if (!res.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const geojsonData = await res.json();
+            console.log(geojsonData);
+
+            if (!map.isStyleLoaded()) {
+                await new Promise(resolve => map.once('load', resolve));
+            }
+
+            if (map.getSource('nodos-pamplona')) {
+                map.getSource('nodos-pamplona').setData(geojsonData);
+            } else {
+                map.addSource('nodos-pamplona', {
+                    type: 'geojson',
+                    data: geojsonData
+                });
+            }
+
+            if (!map.getLayer('capa-nodos')) {
+                map.addLayer({
+                    id: 'capa-nodos',
+                    type: 'line',
+                    source: 'nodos-pamplona',
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    paint: {
+                        'line-width': 2.5,
+                        'line-opacity': 0.9,
+                        'line-color': [
+                            'match',
+                            ['downcase', ['coalesce', ['to-string', ['get', 'tipo_control']], '']],
+                            'traffic_light', '#d1495b',
+                            'priority', '#0f4c5c',
+                            'right_before_left', '#f0b429',
+                            'unregulated', '#64748b',
+                            '#2563eb'
+                        ]
+                    }
+                });
+            }
+        } catch (err) {
+            console.error('Error fetching GeoJSON:', err);
+        } finally {
+            ocultarSpinner();
+        }
+    };
+    
     cargarDatosCalles(window.endPoint);
+    // cargarNodosPamplona(window.endPoint);
 </script>
 
 

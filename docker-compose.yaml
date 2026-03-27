@@ -44,7 +44,7 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - ./postgis:/home/postgres/pgdata
+      - ./postgis:/var/lib/postgresql/data
       - ./output:/tmp/parquet_files
     networks:
       - sumo_network

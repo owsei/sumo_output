@@ -1,0 +1,45 @@
+<div>
+    <nav class="navbar navbar-expand-lg bg-body-tertiary" data-bs-theme="dark">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#">SUMO</a>
+            <select id="estilos">
+                <option value="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json">Claro</option>
+                <option value="https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json">Oscuro</option>
+            </select>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNavDropdown" aria-controls="navbarNavDropdown" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNavDropdown">
+            <ul class="navbar-nav">
+                <li class="nav-item">
+                    <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsWebsocket()" aria-disabled="true"> Descargar carreteras</a>
+                </li>
+                <li class="nav-item">
+                    <a id="getRoadsWebsocketBtn" class="nav-link active bi bi-sign-intersection-side" aria-current="page" href="#" onclick="getRoadsSanchoElFuerte()" aria-disabled="true"> Descargar Sancho El Fuerte</a>
+                </li>
+                <li class="nav-item">
+                    <a id="simWebsocketBtn" class="nav-link bi bi-car-front" href="#" onclick="runSimulationEmissions()" aria-disabled="true"> Crear simulación</a>
+                </li>
+                <li class="nav-item">
+                    <a id="getEmissionsCzmlBtn" class="nav-link bi bi-bar-chart" href="#" onclick="cargarEmisionesTemporales()" aria-disabled="true"> Cargar Emisiones</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link bi bi-cpu" href="#" onclick="testConnection()"> Test </a>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Navegar a...
+                    </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="#" onclick="flyToPamplona()"">Pamplona</a></li>
+                        <li><a class="dropdown-item" href="#" onclick="flyToA10()">A10</a></li>
+                        <li><a class="dropdown-item" href="index.html">Cesium</a></li>
+                        <li><a class="dropdown-item" href="index2.html">NOx</a></li>
+                        <li><a class="dropdown-item" href="traffic_occupacy.html">Ocupación vía</a></li>
+                    </ul>
+                </li>
+            </ul>
+            </div>
+        </div>
+    </nav>
+</div>

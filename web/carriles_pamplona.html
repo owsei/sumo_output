@@ -13,6 +13,59 @@
     <!-- Bootstrap Icons -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="styles/styles.css">
+    <style>
+        .layer-toggle-panel {
+            position: absolute;
+            top: 84px;
+            right: 14px;
+            z-index: 1200;
+            min-width: 190px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 1px solid rgba(15, 23, 42, 0.15);
+            border-radius: 12px;
+            padding: 10px;
+            box-shadow: 0 8px 20px rgba(15, 23, 42, 0.18);
+            backdrop-filter: blur(6px);
+        }
+
+        .layer-toggle-title {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        .layer-toggle-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            margin-bottom: 6px;
+            font-size: 0.84rem;
+            color: #1e293b;
+        }
+
+        .layer-toggle-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .layer-toggle-btn {
+            border: 1px solid rgba(148, 163, 184, 0.55);
+            background: #ffffff;
+            border-radius: 8px;
+            width: 34px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            color: #0f4c5c;
+        }
+
+        .layer-toggle-btn .bi {
+            font-size: 1rem;
+            line-height: 1;
+        }
+    </style>
 </head>
 <body>
 
@@ -40,6 +93,22 @@
     </div>
 </div>
 
+<div class="layer-toggle-panel">
+    <div class="layer-toggle-title">Capas del mapa</div>
+    <div class="layer-toggle-row">
+        <span>Carriles</span>
+        <button id="toggle-carriles" type="button" class="layer-toggle-btn" title="Ocultar capa carriles" aria-label="Ocultar o mostrar carriles">
+            <i class="bi bi-eye-fill"></i>
+        </button>
+    </div>
+    <div class="layer-toggle-row">
+        <span>Nodos</span>
+        <button id="toggle-nodos" type="button" class="layer-toggle-btn" title="Ocultar capa nodos" aria-label="Ocultar o mostrar nodos">
+            <i class="bi bi-eye-fill"></i>
+        </button>
+    </div>
+</div>
+
 <script>
 
     window.endPoint= "http://localhost:8001"
@@ -57,38 +126,136 @@
         zoom: 15
     }));
 
+    const interactiveLayers = new Set();
+    const layerVisibilityState = {
+        'capa-carriles': true,
+        'capa-nodos': true
+    };
+
+    function applyLayerVisibility(layerId) {
+        if (!map.getLayer(layerId)) {
+            return;
+        }
+        const isVisible = layerVisibilityState[layerId] !== false;
+        map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+    }
+
+    function refreshLayerToggleButton(buttonId, layerId, layerName) {
+        const button = document.getElementById(buttonId);
+        if (!button) {
+            return;
+        }
+        const isVisible = layerVisibilityState[layerId] !== false;
+        button.innerHTML = `<i class="bi ${isVisible ? 'bi-eye-fill' : 'bi-eye-slash-fill'}"></i>`;
+        button.title = `${isVisible ? 'Ocultar' : 'Mostrar'} capa ${layerName}`;
+        button.setAttribute('aria-label', `${isVisible ? 'Ocultar' : 'Mostrar'} ${layerName}`);
+        button.setAttribute('aria-pressed', isVisible ? 'true' : 'false');
+    }
+
+    function toggleLayerVisibility(layerId, buttonId, layerName) {
+        layerVisibilityState[layerId] = !layerVisibilityState[layerId];
+        applyLayerVisibility(layerId);
+        refreshLayerToggleButton(buttonId, layerId, layerName);
+    }
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function habilitarClickEnCapa(layerId, title) {
+        if (interactiveLayers.has(layerId) || !map.getLayer(layerId)) {
+            return;
+        }
+
+        interactiveLayers.add(layerId);
+
+        map.on('mouseenter', layerId, () => {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.on('mouseleave', layerId, () => {
+            map.getCanvas().style.cursor = '';
+        });
+
+        map.on('click', layerId, event => {
+            const feature = event.features && event.features[0];
+            if (!feature) {
+                return;
+            }
+
+            const props = feature.properties || {};
+            const rows = Object.entries(props).map(([key, val]) => {
+                return `<tr><th style="padding:2px 8px 2px 0;">${escapeHtml(key)}</th><td>${escapeHtml(val)}</td></tr>`;
+            }).join('');
+
+            const popupHtml = `
+                <div style="font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;min-width:220px;">
+                    <div style="font-weight:700;margin-bottom:6px;">${escapeHtml(title)}</div>
+                    <table style="font-size:12px;line-height:1.3;border-collapse:collapse;">
+                        ${rows || '<tr><td>Sin propiedades</td></tr>'}
+                    </table>
+                </div>
+            `;
+
+            new maplibregl.Popup({ closeButton: true, closeOnClick: true, maxWidth: '320px' })
+                .setLngLat(event.lngLat)
+                .setHTML(popupHtml)
+                .addTo(map);
+        });
+    }
+
+    document.getElementById('toggle-carriles').addEventListener('click', () => {
+        toggleLayerVisibility('capa-carriles', 'toggle-carriles', 'carriles');
+    });
+    document.getElementById('toggle-nodos').addEventListener('click', () => {
+        toggleLayerVisibility('capa-nodos', 'toggle-nodos', 'nodos');
+    });
+    refreshLayerToggleButton('toggle-carriles', 'capa-carriles', 'carriles');
+    refreshLayerToggleButton('toggle-nodos', 'capa-nodos', 'nodos');
+
 
     async function cargarDatosCarriles(endPoint)   {
         
-         mostrarSpinner();
-        
-        const response = await fetch(endPoint + '/carrilesPamplona')
-        .then(res => {
+        mostrarSpinner();
+        try {
+            const res = await fetch(endPoint + '/carrilesPamplona');
             if (!res.ok) {
                 throw new Error('Network response was not ok');
             }
-            return res.json();
-        })
-        .then(geojsonData => {
-
+            const geojsonData = await res.json();
             console.log(geojsonData);
-            // Añadimos la fuente de datos al mapa
-            map.addSource('carriles-pamplona', {
-                type: 'geojson',
-                data: geojsonData
-            });
-
-            // Añadimos la capa visual para las calles
-            map.addLayer({
-                id: 'capa-carriles',
-                type: 'line',
-                source: 'carriles-pamplona',
-                paint: {
-                    'line-width': 1,
-                    'line-color': [
+            if (!map.isStyleLoaded()) {
+                await new Promise(resolve => map.once('load', resolve));
+            }
+            if (map.getSource('carriles-pamplona')) {
+                map.getSource('carriles-pamplona').setData(geojsonData);
+            } else {
+                map.addSource('carriles-pamplona', {
+                    type: 'geojson',
+                    data: geojsonData
+                });
+            }
+            if (!map.getLayer('capa-carriles')) {
+                map.addLayer({
+                    id: 'capa-carriles',
+                    type: 'line',
+                    source: 'carriles-pamplona',
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    paint: {
+                        'line-width': 2.5,
+                        'line-opacity': 0.9,
+                        'line-color': [
                         'interpolate',
                         ['linear'],
-                        ['get', 'max_speed'],
+                        ['get', 'velocidad_max'],
                         0,      '#FFFFFF', // 0 km/h
                         1.39,   '#F2F12D', // 5 km/h
                         5.56,   '#EED322', // 20 km/h
@@ -100,18 +267,85 @@
                         27.78,  '#3BB3C3', // 100 km/h
                         39.44,  '#004EB0'  // 140+ km/h
                     ],
-                    'line-opacity': 0.5
-                }
-            })
+                    }
+                });
+            }
+            applyLayerVisibility('capa-carriles');
+            habilitarClickEnCapa('capa-carriles', 'Información del carril');
             ocultarSpinner();
-        })
-        .catch(err => {
+        } 
+        catch (err) {
                 console.error('Error fetching GeoJSON:', err)
-                ocultarSpinner();   
-            }); 
-        };
-        
+                ocultarSpinner();
+        } 
+        finally {
+                ocultarSpinner();
+        }
+    }
+    
+    async function cargarNodosPamplona(endPoint) {
+        mostrarSpinner();
+        try {
+            const res = await fetch(endPoint + '/nodosPamplona');
+            if (!res.ok) {
+                throw new Error('Network response was not ok');
+            }
+
+            const geojsonData = await res.json();
+            console.log(geojsonData);
+
+            if (!map.isStyleLoaded()) {
+                await new Promise(resolve => map.once('load', resolve));
+            }
+
+            if (map.getSource('nodos-pamplona')) {
+                map.getSource('nodos-pamplona').setData(geojsonData);
+            } else {
+                map.addSource('nodos-pamplona', {
+                    type: 'geojson',
+                    data: geojsonData
+                });
+            }
+
+            if (!map.getLayer('capa-nodos')) {
+                map.addLayer({
+                    id: 'capa-nodos',
+                    type: 'line',
+                    source: 'nodos-pamplona',
+                    layout: {
+                        'line-cap': 'round',
+                        'line-join': 'round'
+                    },
+                    paint: {
+                        'line-width': 2.5,
+                        'line-opacity': 0.9,
+                        'line-color': [
+                            'match',
+                            ['downcase', ['coalesce', ['to-string', ['get', 'tipo_control']], '']],
+                            'traffic_light', '#d1495b',
+                            'priority', '#0f4c5c',
+                            'right_before_left', '#f0b429',
+                            'unregulated', '#64748b',
+                            '#2563eb'
+                        ]
+                    }
+                });
+            }
+
+            applyLayerVisibility('capa-nodos');
+            habilitarClickEnCapa('capa-nodos', 'Informacion del nodo');
+            ocultarSpinner();
+
+        } catch (err) {
+            ocultarSpinner();
+            console.error('Error fetching GeoJSON:', err);
+        } finally {
+            ocultarSpinner();
+        }
+    };
+    
     cargarDatosCarriles(window.endPoint);
+    // cargarNodosPamplona(window.endPoint);
 </script>
 
 

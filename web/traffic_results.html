@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <title>SUMO Simulation Occupancy</title>
+    <meta property="og:description" content="Use the line-gradient and line-dasharray paint properties together to create a dashed line with gradient colors." />
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.js'></script>
+     <!--BOOTSTRAP-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="styles/styles.css">
+    <style>
+        :root {
+            --panel-bg: rgba(255, 255, 255, 0.94);
+            --panel-border: rgba(15, 23, 42, 0.12);
+            --brand-1: #0f4c5c;
+            --brand-2: #2c7a7b;
+            --brand-3: #f0b429;
+            --accent: #d1495b;
+            --muted: #64748b;
+        }
+
+        body {
+            background:
+                radial-gradient(circle at top right, rgba(44, 122, 123, 0.22), transparent 25%),
+                radial-gradient(circle at top left, rgba(240, 180, 41, 0.18), transparent 20%),
+                #eef3f7;
+        }
+
+        .traffic-dashboard {
+            position: absolute;
+            top: 200px;
+            left: 18px;
+            height: 500px;
+            z-index: 1100;
+            width: min(460px, calc(100vw - 24px));
+            max-height: calc(100vh - 96px);
+            overflow-y: auto;
+            background: var(--panel-bg);
+            border: 1px solid var(--panel-border);
+            border-radius: 22px;
+            backdrop-filter: blur(14px);
+            box-shadow: 0 20px 45px rgba(15, 23, 42, 0.20);
+            padding: 18px;
+        }
+
+        .dashboard-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .dashboard-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 700;
+            color: #102a43;
+        }
+
+        .dashboard-subtitle {
+            margin: 0;
+            font-size: 0.82rem;
+            color: var(--muted);
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+
+        .metric-card {
+            background: linear-gradient(160deg, rgba(255, 255, 255, 0.96), rgba(238, 243, 247, 0.96));
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 16px;
+            padding: 12px 14px;
+        }
+
+        .metric-label {
+            display: block;
+            font-size: 0.72rem;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .metric-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .metric-foot {
+            margin-top: 4px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .chart-card {
+            background: #ffffff;
+            border: 1px solid rgba(148, 163, 184, 0.18);
+            border-radius: 18px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .chart-title {
+            margin: 0 0 2px;
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #102a43;
+        }
+
+        .chart-subtitle {
+            margin: 0 0 10px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .chart-wrap {
+            position: relative;
+            height: 200px;
+        }
+
+        .street-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            background: rgba(44, 122, 123, 0.10);
+            color: var(--brand-1);
+            padding: 6px 10px;
+            font-size: 0.82rem;
+            font-weight: 600;
+        }
+
+        .legend-inline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+            font-size: 0.78rem;
+            color: var(--muted);
+        }
+
+        .legend-inline span {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .legend-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+
+        @media (max-width: 991px) {
+            .traffic-dashboard {
+                left: 12px;
+                right: 12px;
+                top: auto;
+                bottom: 12px;
+                width: auto;
+                max-height: 52vh;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div id="simulation-clock">
+    <div style="margin-bottom:20px ;">
+        <button id="launch-btn" type="button" class="btn btn-outline-primary btn-sm">Iniciar</button>
+    </div>
+    <hr>
+    <div class="clock-label">
+        <label for="metric-select">Seleccionar Métrica:</label>
+        <select id="metric-select">
+            <option value="density">Density</option>
+            <option value="occupancy" selected>Occupancy</option>
+            <option value="speed">Speed</option>
+            <option value="flow">Flow</option>
+            <option value="waitingTime">Waiting Time</option>
+        </select>
+    </div>
+    <hr>
+    <div style="border: 1px solid rgb(216, 216, 216); padding: 10px; border-radius: 8px; margin-bottom: 20px;">
+        <div class="clock-label">Tiempo de Simulación</div>
+        <div id="time-display">00:00:00</div>
+        <div class="progress-container">
+            <div id="progress-bar"></div>
+        </div>
+        <div class="d-flex gap-2 align-items-center mt-2">
+            <button id="backward-btn" type="button" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-skip-backward-fill"></i>
+            </button>
+            <button id="play-pause-btn" type="button" class="btn btn-primary btn-sm">Pausa</button>
+            <button id="forward-btn" type="button" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-skip-forward-fill"></i>
+            </button>
+        </div>
+        <div class="mt-2">
+            <input id="time-slider" type="range" min="0" max="7200" step="10" value="0" class="form-range">
+        </div>
+    </div>
+</div>
+
+
+
+<div>
+    <div id="navbar-container"></div>
+</div>
+
+<script src="./js/sumo.js"></script>
+<div id="map"></div>
+<script>
+    
+    fetch('./js/navbar.html')
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+    });
+
+
+    window.isPaused = true;
+    const btn = document.getElementById('play-pause-btn');
+    const btnLaunch = document.getElementById('launch-btn');
+    btn.style.disabled = true; // Deshabilitamos el botón hasta que se carguen los datos
+    const timeDisplay = document.getElementById('time-display');
+    const progressBar = document.getElementById('progress-bar');
+    const dark_light = document.getElementById('dark_light');
+    let selectedMetric = 'occupancy'; // Default
+    let time = 0; // Global time
+
+    // Evento Click para el botón
+    btn.addEventListener('click', () => {
+        window.isPaused = !window.isPaused;
+        btn.innerText = window.isPaused ? 'Reanudar' : 'Pausa';
+        btn.classList.toggle('paused', window.isPaused);
+    });
+
+    // Evento para el select de métricas
+    document.getElementById('metric-select').addEventListener('change', (e) => {
+        selectedMetric = e.target.value;
+        updateLayer();
+    });
+
+    btnLaunch.addEventListener('click', () => {
+        window.isPaused = !window.isPaused;
+        cargarDatos(window.endPoint);
+        // btnLaunch.disabled = true; // Deshabilitamos el botón de lanzamiento después de hacer clic
+    });
+
+
+    window.endPoint= "http://localhost:8001"
+
+    const map = (window.map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        center: [-1.652673,42.805925],
+        zoom: 15
+    }));
+
+    function updateLayer() {
+        const timeKey = time.toString();
+        map.setPaintProperty('capa-traffic', 'line-color', [
+            'interpolate',
+            ['linear'],
+            ['coalesce', 
+                ['to-number', ['get', timeKey, ['get', `${selectedMetric}_por_tiempo`]]], 
+                0 // Si no hay datos en ese segundo, usamos 0 (Gris claro)
+            ],
+            0,  '#F3F4F6', // Vacío - Gris muy claro
+            2,  '#34D399', // Fluido - Verde
+            5,  '#FACC15', // Lento - Amarillo
+            10, '#FB923C', // Denso - Naranja
+            15, '#F87171', // Atasco - Rojo
+            20, '#991B1B'  // Saturado - Granate
+        ]);
+    }
+
+    async function cargarDatos(endPoint)   {
+
+        const response = await fetch(endPoint + '/get-traffic-data')
+        .then(res => {
+            res.json().then(geojsonData => {
+                
+                console.log(geojsonData);
+                map.addSource('sumo-source', {
+                    type: 'geojson',
+                    data: geojsonData // Pasamos los datos recibidos de la API
+                });
+
+                map.addLayer({
+                    id: 'capa-traffic',
+                    type: 'line',
+                    source: 'sumo-source',
+                    paint: {
+                        'line-width': 3,
+                        'line-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['coalesce', ['get', '0', ['get', `${selectedMetric}_por_tiempo`]], 0], // Empezamos en el segundo 0
+                            0, '#F3F4F6', // De 0 a 9.9
+                            1, '#34D399', // De 10 a 19.9
+                            2, '#FACC15', // De 20 a 29.9
+                            3, '#FB923C', // De 30 a 39.9
+                            4, '#F87171', // De 40 a 49.9
+                            5, '#991B1B',  // 50 o más
+                            6, '#7F1D1D',  // 60 o más
+                            7, '#4B0808',  // 70 o más
+                            8, '#2B0505',  // 80 o más
+                            9, '#1A0303',  // 90 o más
+                            10, '#0D0202',  // 100 o más
+                            11, '#050101',  // 110 o más
+                            12, '#020000',  // 120 o más
+                        ]
+                    }
+                });
+
+                lanzarAnimacion();
+
+            })
+        })
+        .catch(err => console.error("Error al cargar datos:", err));
+
+    }
+        
+
+    function lanzarAnimacion() {
+        // Lógica de animación (igual que antes)
+        setInterval(() => {
+            if (window.isPaused) return;
+            time = (time + 10) % 7200;
+            const timeKey = time.toString();
+            console.log(timeKey);
+            timeDisplay.innerText = formatTime(time);
+            const percentage = (time / 7200) * 100;
+            progressBar.style.width = `${percentage}%`;
+            updateLayer();
+        }, 500);
+    }
+
+    // formato de tiempo en horas, minutos y segundos
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+    }
+    
+    // document.getElementById('estilos').addEventListener('change', function (e) {
+    //     map.setStyle(e.target.value);
+    // });
+
+    function toggleTheme() {
+        const currentStyle = map.getStyle().sprite;
+        const newStyle = currentStyle.includes('positron') ? 'https://tiles.stadiamaps.com/styles/alidade_smooth_dark.json' : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        map.setStyle(newStyle);
+        dark_light.className = currentStyle.includes('positron') ? 'bi bi-moon-fill' : 'bi bi-brightness-alt-high-fill';
+    }
+</script>
+
+<aside class="traffic-dashboard">
+    <div class="dashboard-header">
+        <div>
+            <h2 class="dashboard-title">Analitica de trafico</h2>
+            <p class="dashboard-subtitle">Resumen temporal del endpoint `/get-traffic-data` y detalle por calle.</p>
+        </div>
+        <span class="street-chip">
+            <i class="bi bi-signpost-split"></i>
+            <span id="selectedStreetName">Sin calle seleccionada</span>
+        </span>
+    </div>
+
+    <div class="metric-grid">
+        <div class="metric-card">
+            <span class="metric-label">Metrica actual</span>
+            <div class="metric-value" id="currentMetricValue">-</div>
+            <div class="metric-foot" id="currentMetricLabel">Selecciona y carga datos</div>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Media global</span>
+            <div class="metric-value" id="avgMetricValue">-</div>
+            <div class="metric-foot">Promedio de todas las calles en el instante actual</div>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Maximo global</span>
+            <div class="metric-value" id="maxMetricValue">-</div>
+            <div class="metric-foot">Valor pico detectado en el instante actual</div>
+        </div>
+        <div class="metric-card">
+            <span class="metric-label">Calles activas</span>
+            <div class="metric-value" id="activeEdgesValue">-</div>
+            <div class="metric-foot">Segmentos con valor mayor que cero</div>
+        </div>
+    </div>
+
+    <section class="chart-card">
+        <h3 class="chart-title">Tendencia global</h3>
+        <p class="chart-subtitle">Comparacion entre la media y el maximo de la metrica seleccionada.</p>
+        <div class="chart-wrap">
+            <canvas id="globalChart"></canvas>
+        </div>
+        <div class="legend-inline">
+            <span><i class="legend-dot" style="background:#2c7a7b"></i>Media</span>
+            <span><i class="legend-dot" style="background:#d1495b"></i>Maximo</span>
+            <span><i class="legend-dot" style="background:#f0b429"></i>Instante actual</span>
+        </div>
+    </section>
+
+    <section class="chart-card">
+        <h3 class="chart-title">Detalle de la calle</h3>
+        <p class="chart-subtitle" id="streetChartSubtitle">Haz clic en una via del mapa para inspeccionar su evolucion temporal.</p>
+        <div class="chart-wrap">
+            <canvas id="streetChart"></canvas>
+        </div>
+    </section>
+</aside>
+
+<script>
+    (function () {
+        const metricLabels = {
+            density: "Density",
+            occupancy: "Occupancy",
+            speed: "Speed",
+            flow: "Flow",
+            waitingTime: "Waiting Time"
+        };
+
+        const metricSelectOld = document.getElementById("metric-select");
+        const launchBtnOld = document.getElementById("launch-btn");
+        const backwardBtnOld = document.getElementById("backward-btn");
+        const playPauseBtnOld = document.getElementById("play-pause-btn");
+        const forwardBtnOld = document.getElementById("forward-btn");
+        const timeSliderOld = document.getElementById("time-slider");
+
+        const metricSelect = metricSelectOld.cloneNode(true);
+        const launchBtn = launchBtnOld.cloneNode(true);
+        const backwardBtn = backwardBtnOld.cloneNode(true);
+        const playPauseBtn = playPauseBtnOld.cloneNode(true);
+        const forwardBtn = forwardBtnOld.cloneNode(true);
+        const timeSlider = timeSliderOld.cloneNode(true);
+
+        metricSelectOld.replaceWith(metricSelect);
+        launchBtnOld.replaceWith(launchBtn);
+        backwardBtnOld.replaceWith(backwardBtn);
+        playPauseBtnOld.replaceWith(playPauseBtn);
+        forwardBtnOld.replaceWith(forwardBtn);
+        timeSliderOld.replaceWith(timeSlider);
+
+        metricSelect.className = "form-select form-select-sm mt-1";
+        launchBtn.textContent = "Cargar datos";
+        playPauseBtn.textContent = "Reproducir";
+        playPauseBtn.disabled = true;
+        backwardBtn.disabled = true;
+        forwardBtn.disabled = true;
+        timeSlider.disabled = true;
+
+        const timeDisplayEl = document.getElementById("time-display");
+        const progressBarEl = document.getElementById("progress-bar");
+        const currentMetricValueEl = document.getElementById("currentMetricValue");
+        const currentMetricLabelEl = document.getElementById("currentMetricLabel");
+        const avgMetricValueEl = document.getElementById("avgMetricValue");
+        const maxMetricValueEl = document.getElementById("maxMetricValue");
+        const activeEdgesValueEl = document.getElementById("activeEdgesValue");
+        const selectedStreetNameEl = document.getElementById("selectedStreetName");
+        const streetChartSubtitleEl = document.getElementById("streetChartSubtitle");
+
+        let selectedMetric = metricSelect.value || "occupancy";
+        let currentTime = 0;
+        let animationTimer = null;
+        let trafficData = null;
+        let timeKeys = [];
+        let selectedFeature = null;
+        let globalChart = null;
+        let streetChart = null;
+        let globalSeriesCache = {};
+
+        window.isPaused = true;
+        window.endPoint = "http://localhost:8001";
+
+        function getMetricProperty(metric) {
+            return metric + "_por_tiempo";
+        }
+
+        function getMetricValue(feature, metric, timeKey) {
+            if (!feature || !feature.properties) {
+                return 0;
+            }
+
+            const series = feature.properties[getMetricProperty(metric)];
+            if (!series) {
+                return 0;
+            }
+
+            const parsedValue = Number(series[String(timeKey)]);
+            return Number.isFinite(parsedValue) ? parsedValue : 0;
+        }
+
+        function getSortedTimeKeys(features, metric) {
+            const timeKeySet = new Set();
+            for (const feature of features) {
+                const series = feature.properties[getMetricProperty(metric)] || {};
+                Object.keys(series).forEach(key => {
+                    const numericKey = Number(key);
+                    if (Number.isFinite(numericKey)) {
+                        timeKeySet.add(numericKey);
+                    }
+                });
+            }
+            return Array.from(timeKeySet).sort((a, b) => a - b);
+        }
+
+        function formatTime(seconds) {
+            const totalSeconds = Number(seconds) || 0;
+            const h = Math.floor(totalSeconds / 3600);
+            const m = Math.floor((totalSeconds % 3600) / 60);
+            const s = totalSeconds % 60;
+            return [h, m, s].map(value => value < 10 ? "0" + value : String(value)).join(":");
+        }
+
+        function buildColorExpression(timeKey) {
+            return [
+                "interpolate",
+                ["linear"],
+                ["coalesce", ["to-number", ["get", String(timeKey), ["get", getMetricProperty(selectedMetric)]]], 0],
+                0, "#F3F4F6",
+                2, "#34D399",
+                5, "#FACC15",
+                10, "#FB923C",
+                15, "#F87171",
+                20, "#991B1B"
+            ];
+        }
+
+        function updateLayer() {
+            if (!window.map || !window.map.getLayer("capa-traffic")) {
+                return;
+            }
+            window.map.setPaintProperty("capa-traffic", "line-color", buildColorExpression(currentTime));
+        }
+
+        function updateTimeUi() {
+            const maxTime = timeKeys.length > 0 ? timeKeys[timeKeys.length - 1] : 0;
+            timeDisplayEl.textContent = formatTime(currentTime);
+            progressBarEl.style.width = maxTime > 0 ? ((currentTime / maxTime) * 100) + "%" : "0%";
+            timeSlider.min = timeKeys.length > 0 ? String(timeKeys[0]) : "0";
+            timeSlider.max = String(maxTime);
+            timeSlider.value = String(currentTime);
+        }
+
+        function setCurrentTime(newTime) {
+            if (timeKeys.length === 0) {
+                currentTime = 0;
+                updateTimeUi();
+                return;
+            }
+
+            let closestTime = timeKeys[0];
+            let smallestDiff = Math.abs(newTime - closestTime);
+            for (const t of timeKeys) {
+                const diff = Math.abs(newTime - t);
+                if (diff < smallestDiff) {
+                    smallestDiff = diff;
+                    closestTime = t;
+                }
+            }
+
+            currentTime = closestTime;
+            updateTimeUi();
+            updateLayer();
+            updateSummaryCards();
+            refreshCharts();
+        }
+
+        function buildGlobalSeries(metric) {
+            return timeKeys.map(timeKey => {
+                const values = trafficData.features
+                    .map(feature => getMetricValue(feature, metric, timeKey))
+                    .filter(value => Number.isFinite(value));
+
+                if (values.length === 0) {
+                    return { timeKey: timeKey, avg: 0, max: 0 };
+                }
+
+                const total = values.reduce((sum, value) => sum + value, 0);
+                return {
+                    timeKey: timeKey,
+                    avg: total / values.length,
+                    max: Math.max.apply(null, values)
+                };
+            });
+        }
+
+        function getGlobalSeries(metric) {
+            if (!globalSeriesCache[metric]) {
+                globalSeriesCache[metric] = buildGlobalSeries(metric);
+            }
+            return globalSeriesCache[metric];
+        }
+
+        function waitForMapLoad() {
+            if (window.map && window.map.loaded()) {
+                return Promise.resolve();
+            }
+
+            return new Promise(resolve => {
+                window.map.once("load", resolve);
+            });
+        }
+
+        function getChartOptions(showXAxisTitle) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: false,
+                interaction: {
+                    mode: "index",
+                    intersect: false
+                },
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        callbacks: {
+                            title: items => items.length ? formatTime(items[0].parsed.x) : "",
+                            label: item => item.dataset.label + ": " + item.parsed.y.toFixed(2)
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        type: "linear",
+                        ticks: {
+                            callback: value => formatTime(value)
+                        },
+                        title: {
+                            display: showXAxisTitle,
+                            text: "Tiempo"
+                        },
+                        grid: {
+                            color: "rgba(148, 163, 184, 0.15)"
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: "rgba(148, 163, 184, 0.15)"
+                        }
+                    }
+                },
+                elements: {
+                    line: { tension: 0.28 },
+                    point: { radius: 0 }
+                }
+            };
+        }
+
+        function createChartsIfNeeded() {
+            if (!globalChart) {
+                globalChart = new Chart(document.getElementById("globalChart"), {
+                    type: "line",
+                    data: { datasets: [] },
+                    options: getChartOptions(false)
+                });
+            }
+
+            if (!streetChart) {
+                streetChart = new Chart(document.getElementById("streetChart"), {
+                    type: "line",
+                    data: { datasets: [] },
+                    options: getChartOptions(true)
+                });
+            }
+        }
+
+        function renderStreetChart() {
+            if (!streetChart) {
+                return;
+            }
+
+            if (!selectedFeature) {
+                streetChart.data.datasets = [{
+                    label: "Sin seleccion",
+                    data: [],
+                    borderColor: "#94a3b8"
+                }];
+                streetChart.update();
+                return;
+            }
+
+            const series = timeKeys.map(timeKey => ({
+                x: timeKey,
+                y: getMetricValue(selectedFeature, selectedMetric, timeKey)
+            }));
+
+            const currentPoint = series.find(point => point.x === currentTime);
+            streetChart.data.datasets = [
+                {
+                    label: selectedStreetNameEl.textContent,
+                    data: series,
+                    borderColor: "#0f4c5c",
+                    backgroundColor: "rgba(15, 76, 92, 0.14)",
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: "Instante actual",
+                    type: "scatter",
+                    data: currentPoint ? [currentPoint] : [],
+                    borderColor: "#f0b429",
+                    backgroundColor: "#f0b429",
+                    pointRadius: 5
+                }
+            ];
+            streetChart.update();
+        }
+
+        function refreshCharts() {
+            if (!trafficData) {
+                return;
+            }
+
+            createChartsIfNeeded();
+            const globalSeries = getGlobalSeries(selectedMetric);
+            const currentSeriesPoint = globalSeries.find(item => item.timeKey === currentTime) || globalSeries[0];
+
+            globalChart.data.datasets = [
+                {
+                    label: "Media",
+                    data: globalSeries.map(item => ({ x: item.timeKey, y: item.avg })),
+                    borderColor: "#2c7a7b",
+                    backgroundColor: "rgba(44, 122, 123, 0.16)",
+                    fill: true,
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: "Maximo",
+                    data: globalSeries.map(item => ({ x: item.timeKey, y: item.max })),
+                    borderColor: "#d1495b",
+                    backgroundColor: "rgba(209, 73, 91, 0.10)",
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 2
+                },
+                {
+                    label: "Instante actual",
+                    type: "scatter",
+                    data: currentSeriesPoint ? [{ x: currentSeriesPoint.timeKey, y: currentSeriesPoint.avg }] : [],
+                    borderColor: "#f0b429",
+                    backgroundColor: "#f0b429",
+                    pointRadius: 5
+                }
+            ];
+            globalChart.update();
+
+            renderStreetChart();
+        }
+
+        function updateSummaryCards() {
+            if (!trafficData || timeKeys.length === 0) {
+                return;
+            }
+
+            const currentValues = trafficData.features.map(feature => getMetricValue(feature, selectedMetric, currentTime));
+            const validValues = currentValues.filter(value => Number.isFinite(value));
+            const averageValue = validValues.length ? validValues.reduce((sum, value) => sum + value, 0) / validValues.length : 0;
+            const maxValue = validValues.length ? Math.max.apply(null, validValues) : 0;
+            const activeEdges = validValues.filter(value => value > 0).length;
+            const selectedValue = selectedFeature ? getMetricValue(selectedFeature, selectedMetric, currentTime) : null;
+
+            currentMetricValueEl.textContent = (selectedValue !== null ? selectedValue : averageValue).toFixed(2);
+            currentMetricLabelEl.textContent = selectedFeature
+                ? metricLabels[selectedMetric] + " en la calle seleccionada"
+                : metricLabels[selectedMetric] + " medio en el instante actual";
+            avgMetricValueEl.textContent = averageValue.toFixed(2);
+            maxMetricValueEl.textContent = maxValue.toFixed(2);
+            activeEdgesValueEl.textContent = String(activeEdges);
+        }
+
+        function ensureInteractiveLayerHandlers() {
+            if (!window.map || window.map.__trafficHandlersAttached || !window.map.getLayer("capa-traffic")) {
+                return;
+            }
+
+            window.map.__trafficHandlersAttached = true;
+
+            window.map.on("mouseenter", "capa-traffic", () => {
+                window.map.getCanvas().style.cursor = "pointer";
+            });
+
+            window.map.on("mouseleave", "capa-traffic", () => {
+                window.map.getCanvas().style.cursor = "";
+            });
+
+            window.map.on("click", "capa-traffic", event => {
+                const feature = event.features && event.features[0];
+                if (!feature) {
+                    return;
+                }
+
+                selectedFeature = feature;
+                selectedStreetNameEl.textContent = feature.properties.nombre || feature.properties.id || "Calle sin nombre";
+                streetChartSubtitleEl.textContent = "Serie temporal de " + metricLabels[selectedMetric] + " para " + selectedStreetNameEl.textContent + ".";
+                renderStreetChart();
+                updateSummaryCards();
+
+                const currentValue = getMetricValue(feature, selectedMetric, currentTime).toFixed(2);
+                new maplibregl.Popup({ offset: 8 })
+                    .setLngLat(event.lngLat)
+                    .setHTML(
+                        "<div style=\"font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;min-width:220px\">" +
+                        "<strong>" + (feature.properties.nombre || "Calle sin nombre") + "</strong><br>" +
+                        "ID: " + feature.properties.id + "<br>" +
+                        metricLabels[selectedMetric] + ": " + currentValue +
+                        "</div>"
+                    )
+                    .addTo(window.map);
+            });
+        }
+
+        async function cargarDatosAvanzado() {
+            await waitForMapLoad();
+            const response = await fetch(window.endPoint + "/get-traffic-data");
+            if (!response.ok) {
+                throw new Error("No se pudo cargar /get-traffic-data (" + response.status + ")");
+            }
+
+            trafficData = await response.json();
+            globalSeriesCache = {};
+            timeKeys = getSortedTimeKeys(trafficData.features, selectedMetric);
+            currentTime = timeKeys.length > 0 ? timeKeys[0] : 0;
+
+            if (window.map.getSource("sumo-source")) {
+                window.map.getSource("sumo-source").setData(trafficData);
+            } else {
+                window.map.addSource("sumo-source", {
+                    type: "geojson",
+                    data: trafficData
+                });
+            }
+
+            if (!window.map.getLayer("capa-traffic")) {
+                window.map.addLayer({
+                    id: "capa-traffic",
+                    type: "line",
+                    source: "sumo-source",
+                    paint: {
+                        "line-width": 4,
+                        "line-opacity": 0.95,
+                        "line-color": buildColorExpression(currentTime)
+                    }
+                });
+            }
+
+            ensureInteractiveLayerHandlers();
+            backwardBtn.disabled = false;
+            forwardBtn.disabled = false;
+            timeSlider.disabled = false;
+            updateTimeUi();
+            updateLayer();
+            refreshCharts();
+            updateSummaryCards();
+        }
+
+        function startAnimation() {
+            if (animationTimer) {
+                return;
+            }
+
+            animationTimer = window.setInterval(() => {
+                if (window.isPaused || timeKeys.length === 0) {
+                    return;
+                }
+
+                const currentIndex = timeKeys.indexOf(currentTime);
+                const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % timeKeys.length : 0;
+                setCurrentTime(timeKeys[nextIndex]);
+            }, 700);
+        }
+
+        backwardBtn.addEventListener("click", () => {
+            if (timeKeys.length === 0) {
+                return;
+            }
+            const currentIndex = timeKeys.indexOf(currentTime);
+            const prevIndex = currentIndex > 0 ? currentIndex - 1 : timeKeys.length - 1;
+            setCurrentTime(timeKeys[prevIndex]);
+        });
+
+        forwardBtn.addEventListener("click", () => {
+            if (timeKeys.length === 0) {
+                return;
+            }
+            const currentIndex = timeKeys.indexOf(currentTime);
+            const nextIndex = currentIndex >= 0 ? (currentIndex + 1) % timeKeys.length : 0;
+            setCurrentTime(timeKeys[nextIndex]);
+        });
+
+        timeSlider.addEventListener("input", event => {
+            if (timeKeys.length === 0) {
+                return;
+            }
+            setCurrentTime(Number(event.target.value));
+        });
+
+        metricSelect.addEventListener("change", () => {
+            selectedMetric = metricSelect.value;
+            if (trafficData) {
+                const previousTime = currentTime;
+                timeKeys = getSortedTimeKeys(trafficData.features, selectedMetric);
+                setCurrentTime(previousTime);
+                if (selectedFeature) {
+                    streetChartSubtitleEl.textContent = "Serie temporal de " + metricLabels[selectedMetric] + " para " + selectedStreetNameEl.textContent + ".";
+                }
+            }
+        });
+
+        launchBtn.addEventListener("click", async () => {
+            if (trafficData) {
+                window.isPaused = false;
+                playPauseBtn.disabled = false;
+                playPauseBtn.textContent = "Pausa";
+                playPauseBtn.classList.remove("paused");
+                return;
+            }
+
+            launchBtn.disabled = true;
+            launchBtn.textContent = "Cargando...";
+
+            try {
+                await cargarDatosAvanzado();
+                window.isPaused = false;
+                playPauseBtn.disabled = false;
+                playPauseBtn.textContent = "Pausa";
+                startAnimation();
+            } catch (error) {
+                console.error("Error al cargar datos:", error);
+                launchBtn.textContent = "Reintentar";
+                launchBtn.disabled = false;
+            }
+        });
+
+        playPauseBtn.addEventListener("click", () => {
+            window.isPaused = !window.isPaused;
+            playPauseBtn.textContent = window.isPaused ? "Reanudar" : "Pausa";
+            playPauseBtn.classList.toggle("paused", window.isPaused);
+        });
+    })();
+</script>
+
+
+</body>
+</html>
