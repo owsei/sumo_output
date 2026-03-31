@@ -65,6 +65,32 @@
             font-size: 1rem;
             line-height: 1;
         }
+
+        #tipo-control-legend {
+            bottom: 158px;
+            min-width: 210px;
+        }
+
+        #tipo-control-legend .control-items {
+            display: grid;
+            gap: 6px;
+        }
+
+        #tipo-control-legend .control-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            color: #1f2937;
+        }
+
+        #tipo-control-legend .control-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 999px;
+            border: 1px solid rgba(15, 23, 42, 0.18);
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -81,6 +107,16 @@
     <div class="spinner"></div> <b class="text_loading">Loading...</b>
 </div>
 
+<div id="tipo-control-legend" class="legend">
+    <h4>Control de nodos</h4>
+    <div class="control-items">
+        <div class="control-item"><span class="control-dot" style="background:#d1495b"></span><span>traffic_light</span></div>
+        <div class="control-item"><span class="control-dot" style="background:#0f4c5c"></span><span>priority</span></div>
+        <div class="control-item"><span class="control-dot" style="background:#f0b429"></span><span>right_before_left</span></div>
+        <div class="control-item"><span class="control-dot" style="background:#64748b"></span><span>unregulated</span></div>
+        <div class="control-item"><span class="control-dot" style="background:#2563eb"></span><span>otros</span></div>
+    </div>
+</div>
 
 <div id="velocidad-legend" class="legend">
     <h4>Velocidad (km/h)</h4>
@@ -251,22 +287,22 @@
                     },
                     paint: {
                         'line-width': 2.5,
-                        'line-opacity': 0.9,
+                        'line-opacity': 0.8,
                         'line-color': [
-                        'interpolate',
-                        ['linear'],
-                        ['get', 'velocidad_max'],
-                        0,      '#FFFFFF', // 0 km/h
-                        1.39,   '#F2F12D', // 5 km/h
-                        5.56,   '#EED322', // 20 km/h
-                        8.33,   '#E6B71E', // 30 km/h
-                        11.11,  '#DA9C20', // 40 km/h
-                        13.89,  '#007324', // 50 km/h
-                        19.44,  '#258C5D', // 70 km/h
-                        22.22,  '#32A674', // 80 km/h
-                        27.78,  '#3BB3C3', // 100 km/h
-                        39.44,  '#004EB0'  // 140+ km/h
-                    ],
+                            'interpolate',
+                            ['linear'],
+                            ['get', 'max_speed'],
+                            0,      '#FFFFFF', // 0 km/h
+                            1.39,   '#F2F12D', // 5 km/h
+                            5.56,   '#EED322', // 20 km/h
+                            8.33,   '#E6B71E', // 30 km/h
+                            11.11,  '#DA9C20', // 40 km/h
+                            13.89,  '#007324', // 50 km/h
+                            19.44,  '#258C5D', // 70 km/h
+                            22.22,  '#32A674', // 80 km/h
+                            27.78,  '#3BB3C3', // 100 km/h
+                            39.44,  '#004EB0'  // 140+ km/h
+                        ],
                     }
                 });
             }
@@ -344,8 +380,9 @@
         }
     };
     
+    
+    cargarNodosPamplona(window.endPoint);
     cargarDatosCarriles(window.endPoint);
-    // cargarNodosPamplona(window.endPoint);
 </script>
 
 

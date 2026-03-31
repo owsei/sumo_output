@@ -27,6 +27,9 @@ import psycopg2
 
 # sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
 
+url_overpass = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
+
+
 app = FastAPI()
 
 app.add_middleware(
@@ -54,12 +57,10 @@ class  MensajeSocket(BaseModel):
     color: str
     tipo: str
 
-
 class configuracionSumo(BaseModel):
     num_vehicles: int = 1000
     duration_sec: int = 3600
     fringe_factor: int = 10
-
 
 def operative_system_detect():
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
@@ -73,13 +74,13 @@ def operative_system_detect():
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
 
-async def download_osm_data(bbox: BoundingBox, output_path: str, websocket:WebSocket):
+async def download_osm_data_overpass(bbox: BoundingBox, output_path: str, websocket:WebSocket):
     """Descarga directa de Overpass API para evitar errores de osmGet.py"""
     print("Descargando datos de OSM")
     types_filter = "|".join(bbox.road_types)
     print("Filtros de tipos: ", types_filter)
     # Overpass usa el orden: south, west, north, east
-    overpass_url = "https://overpass-api.de/api/interpreter"
+    overpass_url = url_overpass
     # Esta query descarga solo las vías (ways) que coincidan con los tipos
     # y también los nodos (nodes) que forman esas vías.
     try:
@@ -92,14 +93,15 @@ async def download_osm_data(bbox: BoundingBox, output_path: str, websocket:WebSo
         out meta;
         """
         print("Query de OSM: ", query)
-        response = requests.get(overpass_url, params={'data': query})
+        response = requests.get("https://maps.mail.ru/osm/tools/overpass/api/interpreter", params={'data': query})
         if response.status_code == 200:
-            with open(output_path, "wb") as f:
+            with open(output_path, "w") as f:
                 f.write(response.content)
-            await websocket.send_json({"mensaje": "Error guardar fichero carreteras "})
+            await websocket.send_json({"mensaje": "Fichero de carreteras guardado correctamente. "})
         else:
             if response.status_code==403:
-                await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(response.status_code + " " + response.text) })
+                error_msg=f"403 Forbidden: Probablemente has hecho demasiadas solicitudes a Overpass API. Intenta de nuevo más tarde. {response.status_code} {response.text}"
+                await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + error_msg})
             
      
     except Exception as e:
@@ -107,22 +109,102 @@ async def download_osm_data(bbox: BoundingBox, output_path: str, websocket:WebSo
         await websocket.close()
         raise HTTPException(status_code=500, detail=str(e))
 
+async def download_osm_data(bbox: BoundingBox, output_path: str, websocket: WebSocket):
+    """
+    Extrae datos de un archivo .pbf local filtrando por bbox y etiquetas,
+    emulando el comportamiento de la Overpass API.
+    """
+    await websocket.send_json({"mensaje": "Procesando datos OSM desde archivo local... 🛠️"})
+    
+
+    ruta_temp_linux = r"/tmp/"
+    print("Ruta temporal para procesamiento local: ", ruta_temp_linux)
+
+    pbf_source = os.path.join(ruta_temp_linux, "spain.pbf")  # Asegúrate de tener este archivo en tu directorio o ajusta la ruta
+    print("Archivo PBF fuente para procesamiento local: ", pbf_source)
+    # 1. Preparar los filtros de etiquetas (basado en tu query original)
+    # Convertimos la lista de road_types en una cadena separada por comas para osmium
+    types_filter = ",".join(bbox.road_types) 
+    
+    # 2. Definir el comando de osmium
+    # 'extract': corta por coordenadas (bbox)
+    # 'tags-filter': filtra por las etiquetas que especificaste
+    # El orden de bbox en osmium es: west,south,east,north (diferente a Overpass)
+    bbox_str = f"{bbox.west},{bbox.south},{bbox.east},{bbox.north}"
+    
+    # Construimos el filtro de etiquetas negativo (access!=private y motor_vehicle!=no)
+    # Nota: Usamos 'w/' para indicar que filtre 'Ways' (vías)
+    tags_filter = f"w/highway={types_filter}"
+    
+    # 3. Ejecutar el comando mediante subprocess de forma asíncrona para no bloquear el loop
+    try:
+        # Usaremos osmium-tool (comando de consola) que es el más rápido para esto
+        # Si no lo tienes, puedes instalarlo con: sudo apt install osmium-tool
+        cmd = [
+            "osmium", "extract",
+            "--bbox", bbox_str,
+            pbf_source,
+            "-o", "temp_bbox.pbf",
+            "--overwrite"
+        ]
+        
+        process = await asyncio.create_subprocess_exec(*cmd)
+        await process.wait()
+
+        # Segundo paso: Filtrar etiquetas en el recorte
+        cmd_filter = [
+            "osmium", "tags-filter",
+            "temp_bbox.pbf",
+            tags_filter,
+            "-o", output_path, # Guardamos como .osm (XML) si tu app lo requiere así
+            "--overwrite"
+        ]
+        
+        # Si quieres que el output sea XML (como antes), osmium lo hace por la extensión .osm
+        if not output_path.endswith('.osm'):
+            # Forzamos formato xml si el path no tiene la extensión
+            cmd_filter.extend(["--output-format", "osm"])
+
+        process_filter = await asyncio.create_subprocess_exec(*cmd_filter)
+        await process_filter.wait()
+
+        # Limpieza de temporales
+        if os.path.exists("temp_bbox.pbf"):
+            os.remove("temp_bbox.pbf")
+
+        await websocket.send_json({"mensaje": "Fichero de carreteras generado localmente con éxito. ✅"})
+
+    except Exception as e:
+        error_msg = f"Error procesando OSM local: {str(e)}"
+        print(error_msg)
+        await websocket.send_json({"mensaje": "Error en el procesamiento local 🚨: " + error_msg})
+
+
+
 def getVelocityStyle(velocity):
 
     if (velocity>119):
-        return "blue"
+        return "#004EB0"
     elif (velocity>101 and velocity<=119):
-        return "green"
+        return "#3BB3C3"
     elif (velocity>80 and velocity<=101):
-        return "yellow"
-    elif (velocity>60 and velocity<=80):
-        return "purple"
-    elif (velocity>40 and velocity<=60):
-        return "orange"
-    elif (velocity>20 and velocity<=40):
-        return "white"
+        return "#1D704C"
+    elif (velocity>70 and velocity<=80):
+        return "#278D5F"
+    elif (velocity>60 and velocity<=70):
+        return "#2A6B4E"
+    elif (velocity>50 and velocity<=60):
+        return "#007324"
+    elif (velocity>40 and velocity<=50):
+        return "#DA9C20"
+    elif (velocity>30 and velocity<=40):
+        return "#E6B71E"
+    elif (velocity>20 and velocity<=30):
+        return "#EED322"
+    elif (velocity>5 and velocity<=20):
+        return "#F2F12D"
     else:
-        return "gray"
+        return "#FFFFFF"
 
 def getTrafficLightColor(state):
     match state:
@@ -212,7 +294,7 @@ def parse_edge_data(xml_file: str) -> pd.DataFrame:
 
     return df
 
-def convertirEmissionsXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
+async def convertirEmissionsXmlToParquet(websocket,ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
     try:
         tree = ET.parse(ruta_emissions)
         root = tree.getroot()
@@ -253,12 +335,13 @@ def convertirEmissionsXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interv
         df.to_parquet(ruta_parquet, engine='pyarrow', index=False)
         
         print(f"Éxito: Se han procesado {len(df)} registros de edges.")
+        await websocket.send_json({"mensaje": f"Éxito: Se han procesado {len(df)} registros de edges de emisiones.✅"})
 
     except Exception as e:
         print(f"Error al ejecutar SUMO: {e}")
         raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
 
-def convertirTrafficXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
+async def convertirTrafficXmlToParquet(websocket,ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
     try:
         tree = ET.parse(ruta_emissions)
         root = tree.getroot()
@@ -299,7 +382,7 @@ def convertirTrafficXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interval
         df.to_parquet(ruta_parquet, engine='pyarrow', index=False)
         
         print(f"Éxito: Se han procesado {len(df)} registros de edges.")
-
+        await websocket.send_json({"mensaje": f"Éxito: Se han procesado {len(df)} registros de edges de trafico.✅"})
     except Exception as e:
         print(f"Error al ejecutar SUMO: {e}")
         raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
@@ -378,6 +461,155 @@ def parse_sumo_traffic_edge(file_path):
             }
             data.append(entry)
     
+# funcion de guardado en BD de la simulacion, con la idea de que se ejecute al finalizar la simulacion y el parseo de los resultados de emisiones 
+# y trafico, para cargar esos datos en Postgres y poder hacer consultas SQL posteriormente
+def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
+    # Aquí iría la lógica para cargar los datos de la simulación (vehículos, tiempos, etc.) en Postgres
+    # Esto dependerá de cómo estés exportando esos datos desde SUMO (CSV, JSON, etc.)
+    print("Función simulation_to_postgres() aún no implementada.")
+    conn = psycopg2.connect("host=localhost port=5432 dbname=sumo user=admin password=admin")
+    cur = conn.cursor()
+
+    cur.execute("""CREATE TABLE IF NOT EXISTS simulations (
+                    id_simulation integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+                    date timestamp DEFAULT NOW(),
+                    number_of_vehicles integer,
+                    duration_sec double precision,
+                    fringe_factor double precision,
+                    trip_period double precision,
+                    agregation_period double precision
+                
+                )""")
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS edge_emissions_simulation (
+            id_simulation integer,
+            id text,
+            sampled_seconds integer,
+            co_abs double precision,
+            co2_abs double precision,
+            hc_abs double precision,
+            pmx_abs double precision,
+            nox_abs double precision,   
+            fuel_abs double precision,
+            electricity_abs double precision,
+            co_normed double precision,
+            co2_normed double precision,
+            hc_normed double precision,
+            pmx_normed double precision,
+            nox_normed double precision,
+            fuel_normed double precision,
+            electricity_normed double precision,
+            traveltime double precision,
+            co_perveh double precision,
+            co2_perveh double precision,
+            hc_perveh double precision,
+            pmx_perveh double precision,
+            nox_perveh double precision,
+            fuel_perveh double precision,
+            electricity_perveh double precision,
+            interval_begin integer,
+            interval_end integer
+        );
+    """)
+
+    cur.execute("""
+        CREATE TABLE IF NOT EXISTS edge_traffic_simulation (
+            id_simulation integer,
+            id text,
+            sampled_seconds double precision,
+            traveltime double precision,
+            overlap_traveltime double precision,
+            density double precision,
+            overlap_density double precision,
+            lane_density double precision,
+            occupancy double precision,
+            waiting_time double precision,
+            time_loss double precision,
+            speed double precision,
+            speed_relative double precision,
+            departed integer,
+            arrived integer,
+            entered integer,
+            "left" integer,
+            lane_changed_from integer,
+            lane_changed_to integer,
+            flow double precision,
+            interval_begin double precision,
+            interval_end double precision
+        );
+    """)
+
+
+    df_emissions = pd.read_parquet(os.path.join(ruta_output, "edgeEmissions.parquet"))
+    df_emissions.sort_values(['interval_begin'], inplace=True)
+    df_emissions = df_emissions.fillna(0)
+    columns=df_emissions.columns
+    print(f"Columnas del DataFrame: {columns}")
+    print(df_emissions.head(10))
+    print(len(df_emissions))
+    total_rows = len(df_emissions)
+
+    df_traffic = pd.read_parquet(os.path.join(ruta_output, "edgeTraffic.parquet"))
+    df_traffic.sort_values(['interval_begin'], inplace=True)
+    df_traffic = df_traffic.fillna(0)
+    columns_traffic = df_traffic.columns
+    print(f"Columnas del DataFrame edgeTraffic: {columns_traffic}")
+    print(df_traffic.head(10))
+    print(len(df_traffic))
+    total_rows_traffic = len(df_traffic)
+
+    simulation = os.path.join(ruta_output, "simulation.txt")
+    cur.execute("INSERT INTO simulations (date) VALUES (NOW()) RETURNING id_simulation;")
+    id_simulation = cur.fetchone()[0]
+    try:
+        with open(simulation, 'w') as f_simulation:
+            i=1
+            for d in df_emissions.index:
+                porcentaje = (i / total_rows) * 100
+                print(f"\rProgreso: {porcentaje:.2f}% ({i}/{total_rows})", end="")
+                df_row = df_emissions.loc[d]
+                f_simulation.write(f"{df_row}\n")
+                query = f"""
+                    INSERT INTO edge_emissions_simulation ( id_simulation, id, sampled_seconds, co_abs, co2_abs, hc_abs, pmx_abs, nox_abs, fuel_abs, electricity_abs, co_normed, co2_normed, hc_normed, pmx_normed, nox_normed, fuel_normed, electricity_normed, traveltime, co_perveh, co2_perveh, hc_perveh, pmx_perveh, nox_perveh, fuel_perveh, electricity_perveh, interval_begin, interval_end)
+                    VALUES ({id_simulation}, '{df_row["id"]}', {df_row["sampledSeconds"]}, {df_row["CO_abs"]}, {df_row["CO2_abs"]}, {df_row["HC_abs"]}, {df_row["PMx_abs"]}, {df_row["NOx_abs"]}, {df_row["fuel_abs"]}, {df_row["electricity_abs"]}, {df_row["CO_normed"]}, {df_row["CO2_normed"]}, {df_row["HC_normed"]}, {df_row["PMx_normed"]}, {df_row["NOx_normed"]}, {df_row["fuel_normed"]}, {df_row["electricity_normed"]}, {df_row["traveltime"]}, {df_row["CO_perVeh"]}, {df_row["CO2_perVeh"]}, {df_row["HC_perVeh"]}, {df_row["PMx_perVeh"]}, {df_row["NOx_perVeh"]}, {df_row["fuel_perVeh"]}, {df_row["electricity_perVeh"]}, {df_row["interval_begin"]}, {df_row["interval_end"]});
+                """
+                f_simulation.write(f"{query}\n")
+                cur.execute(query)
+                i+=1
+            
+            conn.commit()
+            print("")
+            f_simulation.write("\n--- EDGE TRAFFIC ---\n")
+            j=1
+            for d in df_traffic.index:
+                porcentaje = (j / total_rows_traffic) * 100
+                print(f"\rProgreso edgeTraffic: {porcentaje:.2f}% ({j}/{total_rows_traffic})", end="")
+                df_row = df_traffic.loc[d]
+                f_simulation.write(f"{df_row}\n")
+                query = f"""
+                    INSERT INTO edge_traffic_simulation (id_simulation, id, sampled_seconds, traveltime, overlap_traveltime, density, overlap_density, lane_density, occupancy, waiting_time, time_loss, speed, speed_relative, departed, arrived, entered, "left", lane_changed_from, lane_changed_to, flow, interval_begin, interval_end)
+                    VALUES ({id_simulation}, '{df_row["id"]}', {df_row["sampledSeconds"]}, {df_row["traveltime"]}, {df_row["overlapTraveltime"]}, {df_row["density"]}, {df_row["overlapDensity"]}, {df_row["laneDensity"]}, {df_row["occupancy"]}, {df_row["waitingTime"]}, {df_row["timeLoss"]}, {df_row["speed"]}, {df_row["speedRelative"]}, {df_row["departed"]}, {df_row["arrived"]}, {df_row["entered"]}, {df_row["left"]}, {df_row["laneChangedFrom"]}, {df_row["laneChangedTo"]}, {df_row["flow"]}, {df_row["interval_begin"]}, {df_row["interval_end"]});
+                """
+                f_simulation.write(f"{query}\n")
+                cur.execute(query)
+                j += 1
+            conn.commit()
+
+        cur.close() 
+        conn.close()
+        f_simulation.close()
+        print("\n¡Carga completada!")
+        print("\nDatos de la simulación cargados en Postgres.")
+    except Exception as e:
+        cur.close()
+        conn.close()
+        f_simulation.close()
+        print(f"Error al cargar datos de la simulación: {e} ")
+
+
+
+
 # ******************FIN FUNCIONES DE PARSEO DE LOS RESULTADOS DE EMISIONES DE SUMO**********************#
 # RUTA PARA EJECUTAR LA SIMULACION DE SUMO Y OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES
 @app.websocket("/ws/simulationEmissions")
@@ -405,6 +637,10 @@ async def simulationEmissions(websocket: WebSocket):
     if trip_period is None:
         trip_period = 10  # Valor por defecto
 
+    aggregation_period_sec = websocket.query_params.get("aggregation_period_sec")
+    if aggregation_period_sec is None:
+        aggregation_period_sec = 10  # Valor por defecto
+
     await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
@@ -424,15 +660,17 @@ async def simulationEmissions(websocket: WebSocket):
     
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
-            route_file = os.path.join(tmpdir, "mapa.rou.xml")
-            print("Archivo ROUT creado correctamente", route_file)
-
             if operativeSytemIsLinux==1:
                 net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+                print("Archivo NET creado correctamente", net_file)
                 route_file= os.path.join(ruta_linux, "mapa.rou.xml")
+                print("Archivo ROUT creado correctamente", route_file)
             else:
                 net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+                print("Archivo NET creado correctamente", net_file)
                 route_file= os.path.join(ruta_windows, "mapa.rou.xml")
+                print("Archivo ROUT creado correctamente", route_file)
+
 
             random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
             if operativeSytemIsLinux==1:
@@ -454,20 +692,67 @@ async def simulationEmissions(websocket: WebSocket):
                     "--fringe-factor", fringe_factor
                 ], check=True)  
 
-            # crea el archivo de configuración SUMO
 
+            additional_file_content = f"""<additional>  
+                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, "edgeEmissions.xml")}" />
+                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, "edgeTraffic.xml")}" />
+                                        <vType id="turismo" 
+                                            vClass="passenger" 
+                                            accel="2.6" 
+                                            decel="4.5" 
+                                            sigma="0.5" 
+                                            length="5.0" 
+                                            minGap="2.5" 
+                                            maxSpeed="33.33" 
+                                            color="white"
+                                            emissionClass="HBEFA3/PC_G_EU4"/>
+                                        
+                                        <vType id="bus" 
+                                            vClass="bus" 
+                                            accel="1.5" 
+                                            decel="4.0" 
+                                            sigma="0.5" 
+                                            length="12.0" 
+                                            minGap="3.0" 
+                                            maxSpeed="15.0" 
+                                            color="orange"
+                                            emissionClass="HBEFA4/PC_petrol_Euro-4"/>
+
+                                        <vType id="camion" 
+                                            vClass="truck" 
+                                            accel="1.5" 
+                                            decel="4.0" 
+                                            sigma="0.5" 
+                                            length="12.0" 
+                                            minGap="3.0" 
+                                            maxSpeed="15.0" 
+                                            color="orange"
+                                            emissionClass="HBEFA4/PC_diesel_Euro-4"/>
+                                    </additional>"""
+            
+            try:
+                with open(os.path.join(ruta, "additional.add.xml"), 'w') as f_additional:
+                    f_additional.write(additional_file_content)
+                f_additional.close()
+                print("Archivo additional.add.xml creado correctamente", os.path.join(ruta, "additional.add.xml"))
+            except Exception as e:
+                f_additional.close()
+                print("Error al crear el archivo additional.add.xml:", e)
+
+
+            # crea el archivo de configuración SUMO
             if operativeSytemIsLinux==1:
                 config_file = os.path.join(ruta_linux, "simulation.sumocfg")
             else:
                 config_file = os.path.join(ruta_windows, "simulation.sumocfg")
                 route_file = os.path.join(ruta_windows, "mapa.rou.xml")
-                
+            
             print("Archivo de configuración SUMO creado correctamente", config_file)
             with open(config_file, 'w') as f:
                 f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
                 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
                     <input>
-                        <net-file value="pamplona.net.xml"/>
+                        <net-file value="{net_file}"/>
                         <route-files value="{route_file}"/>
                         <additional-files value="additional.add.xml"/>
                     </input>
@@ -476,7 +761,7 @@ async def simulationEmissions(websocket: WebSocket):
                         <device.rerouting.period value="0"/>
                     </routing>
                 </configuration>""")
-
+            
             print("Archivos de configuración SUMO generados correctamente")
 
             if operativeSytemIsLinux==1:
@@ -504,8 +789,10 @@ async def simulationEmissions(websocket: WebSocket):
                     print("Delete existing parquet file")
                     os.remove(ruta_edgeEmissions_p)
 
-                convertirEmissionsXmlToParquet(os.path.join(ruta_output, "edgeEmissions.xml"),os.path.join(ruta_output, "edgeEmissions.parquet"))
+                await convertirEmissionsXmlToParquet(websocket,os.path.join(ruta_output, "edgeEmissions.xml"),os.path.join(ruta_output, "edgeEmissions.parquet"))
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones de Sancho el Fuerte.🗄️"})   
+
+
 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
                 ruta_traffic_p = os.path.join(ruta_output, "edgeTraffic.parquet")
@@ -513,7 +800,8 @@ async def simulationEmissions(websocket: WebSocket):
                     print("Delete existing parquet file")
                     os.remove(ruta_traffic_p)
 
-                convertirTrafficXmlToParquet(os.path.join(ruta_output, "edgeTraffic.xml"),os.path.join(ruta_output, "edgeTraffic.parquet"))
+                await convertirTrafficXmlToParquet(websocket, os.path.join(ruta_output, "edgeTraffic.xml"),os.path.join(ruta_output, "edgeTraffic.parquet"))
+
                 print(" Fichero de edgeTraffic.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 
@@ -766,7 +1054,6 @@ def get_traffic_data():
 
     # 4. Crear el JSON final con geometría y datos de tráfico
     features = []
-
     for edge_id in df['id'].unique():
         edge = net.getEdge(edge_id)
         shape = edge.getShape()
@@ -817,6 +1104,13 @@ async def websocket_simulation(websocket: WebSocket):
     forbiddenRoads = unquote(forbiddenRoads)
     forbiddenRoadsArray = json.loads(forbiddenRoads)
 
+    sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+    sumo_home_linux = "/usr/share/sumo"
+    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
+    ruta_output_linux = r"/tmp/output"
+    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
+    ruta_linux = r"/tmp/"
+
     if zonaSnachoFuerte==0: 
         if not bbox_str:
             raise HTTPException(status_code=400, detail="Missing bbox parameter")
@@ -830,9 +1124,9 @@ async def websocket_simulation(websocket: WebSocket):
     #DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 0 if platform.system()=="Linux" else 1
     if operativeSytemIsLinux==0:
-       sumo_home = "/usr/share/sumo"
+       sumo_home = sumo_home_linux
     else:
-        sumo_home = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+        sumo_home = sumo_home_windows
     
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
     await websocket.send_json({"mensaje":"Ruta de SUMO encontrada correctamente"+ sumo_home +"| Operative system:"+platform.system()})
@@ -848,9 +1142,6 @@ async def websocket_simulation(websocket: WebSocket):
         type_vehicles_file=os.path.join(tmpdir,"tipos_vehiculos.add.xml")
         print("Tipos de vehiculos", type_vehicles_file)
         
-        config_file =os.path.join(tmpdir,"simulation.sumocfg")
-        print("Config file:", config_file)
-
         detalles_viajes = os.path.join(tmpdir, "detalles_viajes.xml")
         print("Archivo detalles_viajes creado correctamente", detalles_viajes)
 
@@ -866,9 +1157,9 @@ async def websocket_simulation(websocket: WebSocket):
 
         if zonaSnachoFuerte==1:
             if operativeSytemIsLinux==0:
-                net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
+                net_file = os.path.join(ruta_linux, "zona-sancho-el-fuerte.net.xml")
             else:
-                net_file = "C:\\Proyectos\\twin-sumo-output\\red_carreteras\\zona-sancho-el-fuerte.net.xml"
+                net_file = os.path.join(ruta_windows, "zona-sancho-el-fuerte.net.xml")
             
             sumo_types = ",".join([f"highway.{t}" for t in ["motorway", "motorway_link","motorway_junction", "primary", "secondary", "tertiary", "residential", "living_street","trunk","trunk_link", "primary_link", "secondary_link", "tertiary_link","service","trafficlight"]])
             await websocket.send_json({"mensaje":"Red de sancho el fuerte descargada correctamente"})
@@ -942,13 +1233,12 @@ async def websocket_simulation(websocket: WebSocket):
             await websocket.send_json({"mensaje":"Creando archivo de configuración SUMO"})
             
             if operativeSytemIsLinux==0:
-                config_file = "/tmp/simulation.sumocfg"
+                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
             else:
                 config_file = os.path.join(tmpdir, "simulation.sumocfg")
-            
 
             print("Archivo de configuración SUMO creado correctamente", config_file)
-            await websocket.send_json({"mensaje":"Archivo de configuración SUMO creado correctamente"})
+            await websocket.send_json({"mensaje":f"Archivo de configuración SUMO creado correctamente {config_file}"})
             
             # Crear el archivo .sumocfg
             with open(config_file, 'w') as f:
@@ -975,12 +1265,17 @@ async def websocket_simulation(websocket: WebSocket):
 
         if zonaSnachoFuerte==1:
             if operativeSytemIsLinux==1:
-                config_file = os.path.join(tmpdir, "simulation.sumocfg")
+                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
             else:
-                config_file = os.path.join("/tmp/sancho-el-fuerte.sumocfg")
+                config_file = os.path.join(tmpdir, "simulation.sumocfg")
         # 4. Iniciar simulación con TraCI
         try:
-            traciBinary = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
+            if operativeSytemIsLinux==0:
+                traciBinary = "sumo"  # sin GUI
+            else:
+                traciBinary = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
+        # 4. Iniciar simulación con TraCI
+            
             print("Iniciando simulación")
             await websocket.send_json({"mensaje":"Iniciando simulación"})
             traci.start([
@@ -1490,3 +1785,20 @@ async def get_nodos_geojson():
     cur.close()
     conn.close()
     return resultado
+
+@app.get("/autobusesPamplona")
+async def get_autobuses_geojson():
+    
+    try:
+        url_get = "https://bi.plataformaciudad.pamplona.es/pentaho/plugin/cda/api/doQuery?path=/public/sc_pamplona_pro/verticals/sql/urbanmobility_vehicle.cda&dataAccessId=urbanmobility_vehicle_lastdata_geojson&_TRUST_USER_=opendata_sc_pamplona"
+        response = requests.get(url_get)
+
+        data = response.json()
+        # 1. Extraemos el string de la primera fila y primera columna
+        geojson_str = data['result']['data'][0][0]
+        # 2. Convertimos el string a un objeto JSON
+        geojson_data = json.loads(geojson_str)
+        return geojson_data
+    
+    except Exception as e:
+        print("Error al obtener datos de autobuses de Pamplona:", str(e))

@@ -9,3 +9,8 @@ Generación de una simulacion de SUMO y obtencion de los ficheros generados de s
 
 
 
+CREATE ROLE web_anon nologin;
+GRANT USAGE ON SCHEMA api TO web_anon;
+GRANT USAGE ON SCHEMA public TO web_anon;
+GRANT SELECT ON api.productos TO web_anon;
+GRANT SELECT ON api.productos TO web_anon;

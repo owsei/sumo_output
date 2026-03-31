@@ -51,7 +51,9 @@
     </div>
 </div>
 
-
+<div id="spinnerOverlay" class="spinner-overlay" >
+    <div class="spinner"></div> <b class="text_loading">Loading...</b>
+</div>
 
 <div>
     <div id="navbar-container"></div>
@@ -144,11 +146,13 @@
     }
 
     map.on('load', async () => {
+
+         mostrarSpinner();
         // Llamada al backend de FastAPI
         const response = await fetch(window.endPoint + '/get-emission-data')
         const geojsonData = await response.json();
         console.log(geojsonData);
-
+        ocultarSpinner();
         isPaused = true; // Pausamos para analizar
         btn.innerText = 'Reanudar';
 

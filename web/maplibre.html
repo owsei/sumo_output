@@ -93,8 +93,13 @@
         const map = new maplibregl.Map({
             container: 'map', // ID del div
             style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json', // Estilo por defecto
-            center: [-3.70379, 40.41578], // Longitud, Latitud [Madrid]
-            zoom: 2 // Nivel de zoom inicial
+            // center: [-3.70379, 40.41578], // Longitud, Latitud [Madrid]
+            center: [-1.652673,42.816455], // Longitud, Latitud [Pamplona]
+            // zoom: 2 // Nivel de zoom inicial
+            zoom: 12, // Zoom cercano para ver el 3D
+            // pitch: 60, // Ángulo de cámara (0 es plano, 60 es inclinado)
+            // bearing: -17.6, // Rotación del mapa (opcional)
+            antialias: true // Suavizado de bordes para que se vea mejor
         });
 
         // Añade botones de zoom y rotación
@@ -132,7 +137,7 @@
             })
             .setLngLat([-1.644018, 42.818313]) // Coordenadas del marcador [Pamplona]
             .setPopup(popup2)
-        .addTo(map);
+            .addTo(map);
 
         // Cargamos datos al cargar la página
         map.on('load', () => {
@@ -246,6 +251,7 @@
                 popup4.remove();
             });
 
+            
             // Ejemplo de añadir una capa con datos de terremotos (GeoJSON)
             map.addSource('terremotos', {
                 'type': 'geojson',
@@ -255,7 +261,52 @@
             // loadEarthquakeData();
 
             loadEarthquakeHeatmap();
-        
+
+            const layers = map.getStyle().layers;
+            let labelLayerId;
+            for (let i = 0; i < layers.length; i++) {
+                if (layers[i].type === 'symbol' && layers[i].layout['text-field']) {
+                    labelLayerId = layers[i].id;
+                    break;
+                }
+            }
+
+            // 2. Añadimos la capa de extrusión 3D
+            map.addLayer(
+                {
+                    'id': 'edificios-3d',
+                    'source': 'openmaptiles', // Este es el nombre estándar de la fuente en muchos estilos
+                    'source-layer': 'building', // La capa de datos específica de edificios
+                    'type': 'fill-extrusion',
+                    'minzoom': 15, // Solo visible de cerca
+                    'paint': {
+                        // Color del edificio
+                        'fill-extrusion-color': '#aaa',
+                        
+                        // Usamos una expresión para la altura
+                        // Si existe el dato 'render_height', úsalo. Si no, usa 'height'.
+                        'fill-extrusion-height': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15, 0, // A zoom 15, altura 0 (plano)
+                            15.05, ['get', 'height'] // A zoom 15.05, altura real
+                        ],
+                        'fill-extrusion-base': [
+                            'interpolate',
+                            ['linear'],
+                            ['zoom'],
+                            15, 0,
+                            15.05, ['get', 'min_height']
+                        ],
+                        'fill-extrusion-opacity': 0.6
+                    }
+                },
+                labelLayerId // ¡Importante! Insertar ANTES de las etiquetas
+            );
+
+            
+
         });
 
         // Función para volar a Pamplona
@@ -371,7 +422,6 @@
 
         }
 
-
         // Función para añadir nuestras capas personalizadas (calles, carriles, semáforos, etc.) después de cada cambio de estilo
         function añadirMisCapas() {
             // Verificamos si la fuente ya existe para no duplicarla
@@ -383,6 +433,7 @@
                 
                 loadEarthquakeData();
                 loadEarthquakeHeatmap();
+                cargarDatosPentaho();
             }
         }
 
@@ -390,7 +441,6 @@
         map.on('styledata', () => {
             añadirMisCapas();
         });
-
 
         const geocoderApi = {
             forwardGeocode: async (config) => {
@@ -421,6 +471,48 @@
         };
 
         map.addControl(new MaplibreGeocoder(geocoderApi, { maplibregl: maplibregl }));
+
+
+        async function cargarDatosPentaho() {
+            try {
+                
+                const response = await fetch('http://localhost:8001/autobusesPamplona');
+                const data = await response.json();
+
+                // 1. Extraemos el string de la primera fila y primera columna
+                const geojsonString = data.resultset[0][0];
+
+                // 2. IMPORTANTE: Convertimos ese String en un objeto JSON real
+                const geojsonObject = JSON.parse(geojsonString);
+
+                // 3. Añadimos la fuente a MapLibre
+                if (map.getSource('vehiculos')) {
+                    // Si ya existe (para actualizaciones), solo actualizamos los datos
+                    map.getSource('vehiculos').setData(geojsonObject);
+                } else {
+                    // Si es la primera vez, creamos la fuente y la capa
+                    map.addSource('vehiculos', {
+                        'type': 'geojson',
+                        'data': geojsonObject
+                    });
+
+                    map.addLayer({
+                        'id': 'capa-vehiculos',
+                        'type': 'circle',
+                        'source': 'vehiculos',
+                        'paint': {
+                            'circle-radius': 8,
+                            'circle-color': '#00ff00',
+                            'circle-stroke-width': 2,
+                            'circle-stroke-color': '#ffffff'
+                        }
+                    });
+                }
+            } catch (error) {
+                console.error("Error procesando los datos de Pentaho:", error);
+            }
+        }
+
 
     </script>
 </body>

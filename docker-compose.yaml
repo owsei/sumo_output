@@ -11,8 +11,8 @@ services:
       - "8001:8000"
     stdin_open: true
     tty: true
-    # volumes:
-    #   - ./temp/output:/tmp/output
+    volumes:
+      - ./output:/tmp/output
     networks:
       - sumo_network
   
@@ -46,6 +46,38 @@ services:
     volumes:
       - ./postgis:/var/lib/postgresql/data
       - ./output:/tmp/parquet_files
+    networks:
+      - sumo_network
+
+  postrest:
+    image: postgrest/postgrest
+    hostname: postrest
+    container_name: postrest
+    ports:
+      - "3000:3000"
+    environment:
+      PGRST_SERVER_HOST: 0.0.0.0
+      # URI de conexión (usamos el nombre del servicio 'db')
+      PGRST_DB_URI: postgres://admin:admin@duckdb:5432/sumo
+      # Esquema que expondrá la API
+      PGRST_DB_SCHEMA: api
+      # Rol para usuarios no autenticados
+      PGRST_DB_ANON_ROLE: web_anon
+    depends_on:
+      - duckdb
+    networks:
+      - sumo_network
+
+  swagger:
+    hostname: swagger
+    container_name: swagger
+    image: swaggerapi/swagger-ui
+    ports:
+      - "8080:8080"
+    expose:
+      - "8080"
+    environment:
+      API_URL: http://localhost:3000/
     networks:
       - sumo_network
 
