@@ -1,0 +1,7 @@
+C:\Proyectos\01_SUMO\sumo-1.26.0\bin\polyconvert --net-file C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml --shapefile-prefixes URBA_Pol_Barrios --shapefile.id-column BARRIO --o barrios.poly.xml 
+
+
+
+
+
+python C:\Proyectos\01_SUMO\sumo-1.26.0\tools\edgesInDistricts.py -n C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml -t barrios.poly.xml -o barrios.taz.xml

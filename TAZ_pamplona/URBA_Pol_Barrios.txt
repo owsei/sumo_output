@@ -1,0 +1,6 @@
+﻿Urbanismo y Vivienda- Delimitación de los barrios:
+     Atributo: FEATURE - Descripción: Código de capa
+     Atributo: ID - Descripción: Código de barrio
+     Atributo: ID_N - Descripción: Código de barrio orden alfabético
+     Atributo: TIPO - Descripción: Tipo de elemento
+     Atributo: BARRIO - Descripción: Nombre de barrio
