@@ -1,0 +1,9 @@
+### Consultas para probar la API de PostgREST
+GET http://localhost:3000/simulations
+
+###
+### Probar FastAPI
+curl -H "Host: api.fastapi.localhost" http://localhost:81/docs
+
+### Probar PostgREST
+curl -H "Host: db.postrest.localhost" http://localhost:81/

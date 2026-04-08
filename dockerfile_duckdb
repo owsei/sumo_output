@@ -1,8 +1,26 @@
 FROM pgduckdb/pgduckdb:17-main
-
 USER root
-
 RUN echo "Actualizando e instalando postgis"
 RUN apt-get update && apt-get install -y postgresql-17-postgis-3
+
+# FROM postgres:16
+
+# # Instalar dependencias necesarias para compilar
+# RUN apt-get update && apt-get install -y \
+#     build-essential \
+#     cmake \
+#     git \
+#     postgresql-server-dev-16 \
+#     libduckdb-dev \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # # Clonar y compilar pg_duckdb
+# RUN git clone https://github.com/duckdb/pg_duckdb.git \
+
+#     && cd pg_duckdb \
+#     && make install
+
+# # # Configurar Postgres para que cargue la extensión al iniciar
+# RUN echo "shared_preload_libraries = 'pg_duckdb'" >> /usr/share/postgresql/postgresql.conf.sample
 
 

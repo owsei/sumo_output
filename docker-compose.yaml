@@ -7,10 +7,17 @@ services:
       dockerfile: dockerfile_sumo_fastapi
     environment:
       - SUMO_HOME=/usr/share/sumo
-    ports:
-      - "8001:8000"
+    # ports:
+    #   - "8001:8000"
     stdin_open: true
     tty: true
+    labels:
+      - "traefik.enable=true"
+      # Define la URL de acceso
+      - "traefik.http.routers.fastapi.rule=Host(`api.fastapi.localhost`)"
+      - "traefik.http.routers.fastapi.entrypoints=web"
+      # Puerto donde corre FastAPI dentro del contenedor (ej. 8000)
+      - "traefik.http.services.fastapi.loadbalancer.server.port=8000"
     volumes:
       - ./output:/tmp/output
     networks:
@@ -43,6 +50,8 @@ services:
       POSTGRES_PORT: 5432
     ports:
       - "5432:5432"
+    # labels:
+    #   - "traefik.http.routers.duckdb.rule=Host(`duckdb.localhost`)"
     volumes:
       - ./postgis:/var/lib/postgresql/data
       - ./output:/tmp/parquet_files
@@ -65,6 +74,12 @@ services:
       PGRST_DB_ANON_ROLE: web_anon
     depends_on:
       - duckdb
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.postgrest.rule=Host(`db.postrest.localhost`)"
+      - "traefik.http.routers.postgrest.entrypoints=web"
+      # PostgREST suele usar el puerto 3000 por defecto
+      - "traefik.http.services.postgrest.loadbalancer.server.port=3000"
     networks:
       - sumo_network
 
@@ -76,12 +91,32 @@ services:
       - "8080:8080"
     expose:
       - "8080"
+    # labels:
+    #   - "traefik.http.routers.swagger.rule=Host(`swagger.localhost`)"
     environment:
       API_URL: http://localhost:3000/
+    networks:
+      - sumo_network
+
+  # docker-compose.yml
+  traefik:
+    image: traefik:v3.6
+    hostname: traefik
+    container_name: traefik
+    command:
+      - "--providers.docker=true"
+      - "--providers.docker.network=proxy"
+      - "--providers.docker.exposedbydefault=false" # Por seguridad
+      - "--entrypoints.web.address=:80"
+      - "--api.insecure=true"
+    ports:
+      - "81:80"
+      - "8081:8080" # Dashboard de Traefik
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - sumo_network
 
 networks:
   sumo_network:
     driver: bridge
-    

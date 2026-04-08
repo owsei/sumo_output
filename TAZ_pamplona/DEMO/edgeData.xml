@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-11-26 10:13:50 by Eclipse SUMO GUI Version 1.24.0
+<sumoConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/sumoConfiguration.xsd">
+
+    <input>
+        <net-file value="C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\red_navarra.net.xml"/>
+        <additional-files value="C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\municipios_navarra.taz.xml,C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\ output.add.xml"/>
+    </input>
+
+    <output>
+        <tripinfo-output value="C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\tripinfos.xml"/>
+        <statistic-output value="C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\stats.xml"/>
+    </output>
+
+    <processing>
+        <ignore-route-errors value="true"/>
+        <tls.actuated.jam-threshold value="30"/>
+    </processing>
+
+    <routing>
+        <device.rerouting.adaptation-steps value="18"/>
+        <device.rerouting.adaptation-interval value="10"/>
+    </routing>
+
+    <report>
+        <verbose value="true"/>
+        <duration-log.statistics value="true"/>
+        <no-step-log value="true"/>
+    </report>
+
+    <gui_only>
+        <gui-settings-file value="C:\workspace\SUMO - GGDD\KnowledgeTransfer\8. SUMO\03_TAZ\TUTORIAL_TAZ\TUTORIAL\osm.view.xml"/>
+    </gui_only>
+
+</sumoConfiguration>
+-->
+
+<meandata xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/meandata_file.xsd">
+</meandata>

@@ -1,0 +1,209 @@
+create extension if not exists postgis
+
+CREATE TABLE IF NOT EXISTS nodos_pamplona (
+    node_id TEXT PRIMARY KEY,
+    tipo_control TEXT,
+    point GEOMETRY(Point, 4326),
+    shape GEOMETRY(LINESTRING, 4326)
+)
+
+CREATE TABLE IF NOT EXISTS calles_pamplona (
+    id VARCHAR PRIMARY KEY,
+    velocidad FLOAT,
+    longitud FLOAT,
+    edge_name VARCHAR,
+    geom GEOMETRY(LineString, 4326)
+)
+
+
+ CREATE TABLE IF NOT EXISTS carriles_pamplona (
+    lane_id TEXT PRIMARY KEY,
+    edge_id TEXT REFERENCES calles_pamplona(id),
+    indice_carril INTEGER, 
+    ancho FLOAT,
+    permisos TEXT, -- "passenger, bus, taxi..."
+    velocidad_max FLOAT,
+    geom GEOMETRY(LineString, 4326)
+)
+
+CREATE TABLE IF NOT EXISTS traffic_lights_pamplona (
+    tls_id TEXT PRIMARY KEY,
+    node_id TEXT REFERENCES nodos_pamplona(node_id),
+    edge_id TEXT REFERENCES calles_pamplona(id),
+    link_index INTEGER,
+    geom GEOMETRY(Point, 4326)
+)
+
+
+CREATE INDEX IF NOT EXISTS idx_nodos_geom ON nodos_pamplona USING GIST (point, shape);
+CREATE INDEX IF NOT EXISTS idx_carriles_geom ON carriles_pamplona USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_calles_geom ON calles_pamplona USING GIST (geom);
+CREATE INDEX IF NOT EXISTS idx_traffic_lights_geom ON traffic_lights_pamplona USING GIST (geom);
+
+
+
+CREATE TABLE IF NOT EXISTS simulations (
+    id_simulation integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+    date timestamp DEFAULT NOW(),
+    number_of_vehicles integer,
+    duration_sec double precision,
+    fringe_factor double precision,
+    trip_period double precision,
+    agregation_period double precision
+)
+
+
+CREATE TABLE IF NOT EXISTS edge_emissions_simulation (
+    id_simulation integer,
+    id text,
+    sampled_seconds integer,
+    co_abs double precision,
+    co2_abs double precision,
+    hc_abs double precision,
+    pmx_abs double precision,
+    nox_abs double precision,   
+    fuel_abs double precision,
+    electricity_abs double precision,
+    co_normed double precision,
+    co2_normed double precision,
+    hc_normed double precision,
+    pmx_normed double precision,
+    nox_normed double precision,
+    fuel_normed double precision,
+    electricity_normed double precision,
+    traveltime double precision,
+    co_perveh double precision,
+    co2_perveh double precision,
+    hc_perveh double precision,
+    pmx_perveh double precision,
+    nox_perveh double precision,
+    fuel_perveh double precision,
+    electricity_perveh double precision,
+    interval_begin integer,
+    interval_end integer
+);
+
+
+CREATE TABLE IF NOT EXISTS edge_traffic_simulation (
+    id_simulation integer,
+    id text,
+    sampled_seconds double precision,
+    traveltime double precision,
+    overlap_traveltime double precision,
+    density double precision,
+    overlap_density double precision,
+    lane_density double precision,
+    occupancy double precision,
+    waiting_time double precision,
+    time_loss double precision,
+    speed double precision,
+    speed_relative double precision,
+    departed integer,
+    arrived integer,
+    entered integer,
+    "left" integer,
+    lane_changed_from integer,
+    lane_changed_to integer,
+    flow double precision,
+    interval_begin double precision,
+    interval_end double precision
+);
+
+
+
+
+CREATE SCHEMA api;
+SELECT count(*)
+FROM public.calles_pamplona;
+
+SELECT count(*)
+FROM public.carriles_pamplona;
+
+
+SELECT count(*)
+FROM public.edge_emissions_simulation;
+
+SELECT count(*)
+FROM public.edge_traffic_simulation;
+
+
+CREATE MATERIALIZED VIEW api.calles_pamplona
+AS 
+SELECT * FROM calles_pamplona;
+
+GRANT SELECT ON api.calles_pamplona TO web_anon;
+
+
+CREATE MATERIALIZED VIEW api.calles_pamplona_geojson
+AS 
+SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type','Feature',
+            'id', id,
+            'max_speed', velocidad,
+            'geometry',   ST_AsGeoJSON(geom)::jsonb,
+            'properties', jsonb_build_object(
+                'id', id,
+                'max_speed', velocidad,
+                'length', longitud,
+                'name', edge_name
+            )
+          ) AS feature
+          FROM calles_pamplona
+        ) AS features;
+
+GRANT SELECT ON api.calles_pamplona_geojson TO web_anon;
+
+
+CREATE MATERIALIZED VIEW api.carriles_pamplona
+AS
+SELECT * FROM carriles_pamplona;
+
+GRANT SELECT ON api.calles_pamplona TO web_anon;
+
+CREATE MATERIALIZED VIEW api.carriles_pamplona_geojson
+AS
+SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         lane_id,
+            'max_speed', velocidad_max,
+            'geometry',   ST_AsGeoJSON(geom)::jsonb,
+            'properties', jsonb_build_object(
+                'id', lane_id,
+                'index', indice_carril,
+                'max_speed', velocidad_max,
+                'width', ancho,
+                'permission', permisos,
+                'calle_id', edge_id
+            )
+          ) AS feature
+          FROM carriles_pamplona
+        ) AS features;
+
+GRANT SELECT ON api.carriles_pamplona_geojson TO web_anon;
+
+
+CREATE MATERIALIZED VIEW IF NOT exists api.carriles_pamplona
+as 
+select * from carriles_pamplona
+
+GRANT SELECT ON api.carriles_pamplona TO web_anon;
+
+
+CREATE MATERIALIZED VIEW api.emision_simulacion
+AS
+SELECT id_simulation, id, sampled_seconds, co_abs, co2_abs, hc_abs, pmx_abs, nox_abs, fuel_abs, electricity_abs, co_normed, co2_normed, hc_normed, pmx_normed, nox_normed, fuel_normed, electricity_normed, traveltime, co_perveh, co2_perveh, hc_perveh, pmx_perveh, nox_perveh, fuel_perveh, electricity_perveh, interval_begin, interval_end
+FROM public.edge_emissions_simulation;
+
+GRANT SELECT ON api.emision_simulacion TO web_anon;
+
+

@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- generated on 2025-11-26 10:29:30 by Eclipse SUMO netedit Version 1.24.0
+-->
+
+<data xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/datamode_file.xsd">
+	<interval id="navarraOD" begin="0.00" end="86400.00">
+		<tazRelation from="ETXARRI_ARANATZ" to="PAMPLONA_01" count="891" />
+
+		<tazRelation from="LAKUNTZA#0" to="PAMPLONA_02" count="1049" />
+
+		<tazRelation from="ALTSASU___ALSASUA" to="PAMPLONA_03" count="824" />
+
+		<tazRelation from="ORKOIEN" to="PAMPLONA_04" count="13166" />
+
+		<tazRelation from="BERRIOPLANO___BERRIOBEITI" to="PAMPLONA_05" count="891" />
+
+		<tazRelation from="IRURTZUN" to="PAMPLONA_06" count="891" />
+
+		<tazRelation from="LEITZA" to="PAMPLONA_07" count="891" />
+
+		<tazRelation from="LEKUNBERRI" to="PAMPLONA_13" count="891" />
+
+
+		<tazRelation from="PAMPLONA_12" to="ETXARRI_ARANATZ" count="803" />
+
+		<tazRelation from="PAMPLONA_11" to="LAKUNTZA#0" count="1142" />
+
+		<tazRelation from="PAMPLONA_09" to="ALTSASU___ALSASUA" count="694" />
+
+		<tazRelation from="PAMPLONA_08" to="ORKOIEN" count="13128" />
+
+		<tazRelation from="PAMPLONA_10" to="BERRIOPLANO___BERRIOBEITI" count="17340" />
+
+		<tazRelation from="PAMPLONA_07" to="IRURTZUN" count="3233" />
+
+		<tazRelation from="PAMPLONA_06" to="LEITZA" count="249" />
+
+		<tazRelation from="PAMPLONA_05" to="LEKUNBERRI" count="906" />
+	</interval>
+
+	<!-- Hora punta de la mañana (7:00 a 9:00) -->
+	<!-- <interval id="morning_peak" begin="25200" end="32400">
+        <tazRelation from="ETXARRI_ARANATZ" to="PAMPLONA_13" count="300"/>
+        <tazRelation from="TUDELA" to="PAMPLONA_13" count="150"/>
+    </interval> -->
+
+	<!-- Hora punta de la tarde (17:00 a 19:00) -->
+	<!-- <interval id="evening_peak" begin="61200" end="68400">
+        <tazRelation from="PAMPLONA_13" to="ETXARRI_ARANATZ" count="280"/>
+        <tazRelation from="PAMPLONA_13" to="TUDELA" count="120"/>
+    </interval> -->
+</data>

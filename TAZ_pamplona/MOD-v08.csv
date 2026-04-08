@@ -1,0 +1,817 @@
+ID_Origen;Nombre_Origen;ID_Destino;Nombre_Destino;Viajes
+1;Casco Viejo;1;Casco Viejo;55
+1;Casco Viejo;2;Ensanche;1274
+1;Casco Viejo;3;Iturrama;943
+1;Casco Viejo;4;San Juan;778
+1;Casco Viejo;5;Ermitagaña-Mendebaldea;1015
+1;Casco Viejo;6;Milagrosa-Azpilagaña;911
+1;Casco Viejo;7;Lezkairu;462
+1;Casco Viejo;8;Mendillorri;456
+1;Casco Viejo;9;Rochapea;891
+1;Casco Viejo;10;Txantrea;847
+1;Casco Viejo;11;San Jorge;733
+1;Casco Viejo;12;Buztintxuri;359
+1;Casco Viejo;13;Etxabakoitz;524
+1;Casco Viejo;14;Zizur Mayor;318
+1;Casco Viejo;15;Barañáin;800
+1;Casco Viejo;16;Cendea de Cizur;748
+1;Casco Viejo;17;Burlada;850
+1;Casco Viejo;18;Villava;280
+1;Casco Viejo;19;Berriozar;374
+1;Casco Viejo;20;Orkoien;442
+1;Casco Viejo;21;Berrioplano;578
+1;Casco Viejo;22;Aranguren;952
+1;Casco Viejo;23;Egüés;918
+1;Casco Viejo;24;Huarte;319
+1;Casco Viejo;25;Ezcabarte;265
+1;Casco Viejo;26;Noáin;297
+2;Ensanche;1;Casco Viejo;1274
+2;Ensanche;2;Ensanche;185
+2;Ensanche;3;Iturrama;2395
+2;Ensanche;4;San Juan;2004
+2;Ensanche;5;Ermitagaña-Mendebaldea;2349
+2;Ensanche;6;Milagrosa-Azpilagaña;2362
+2;Ensanche;7;Lezkairu;1133
+2;Ensanche;8;Mendillorri;1253
+2;Ensanche;9;Rochapea;2435
+2;Ensanche;10;Txantrea;2157
+2;Ensanche;11;San Jorge;1723
+2;Ensanche;12;Buztintxuri;940
+2;Ensanche;13;Etxabakoitz;1122
+2;Ensanche;14;Zizur Mayor;789
+2;Ensanche;15;Barañáin;1976
+2;Ensanche;16;Cendea de Cizur;1859
+2;Ensanche;17;Burlada;2112
+2;Ensanche;18;Villava;696
+2;Ensanche;19;Berriozar;929
+2;Ensanche;20;Orkoien;1098
+2;Ensanche;21;Berrioplano;1436
+2;Ensanche;22;Aranguren;2366
+2;Ensanche;23;Egüés;2281
+2;Ensanche;24;Huarte;796
+2;Ensanche;25;Ezcabarte;659
+2;Ensanche;26;Noáin;740
+3;Iturrama;1;Casco Viejo;943
+3;Iturrama;2;Ensanche;2395
+3;Iturrama;3;Iturrama;205
+3;Iturrama;4;San Juan;1445
+3;Iturrama;5;Ermitagaña-Mendebaldea;1911
+3;Iturrama;6;Milagrosa-Azpilagaña;1691
+3;Iturrama;7;Lezkairu;864
+3;Iturrama;8;Mendillorri;841
+3;Iturrama;9;Rochapea;1642
+3;Iturrama;10;Txantrea;1576
+3;Iturrama;11;San Jorge;1378
+3;Iturrama;12;Buztintxuri;665
+3;Iturrama;13;Etxabakoitz;994
+3;Iturrama;14;Zizur Mayor;593
+3;Iturrama;15;Barañáin;1493
+3;Iturrama;16;Cendea de Cizur;1395
+3;Iturrama;17;Burlada;1586
+3;Iturrama;18;Villava;524
+3;Iturrama;19;Berriozar;698
+3;Iturrama;20;Orkoien;825
+3;Iturrama;21;Berrioplano;1078
+3;Iturrama;22;Aranguren;1776
+3;Iturrama;23;Egüés;1713
+3;Iturrama;24;Huarte;596
+3;Iturrama;25;Ezcabarte;495
+3;Iturrama;26;Noáin;555
+4;San Juan;1;Casco Viejo;778
+4;San Juan;2;Ensanche;2004
+4;San Juan;3;Iturrama;1445
+4;San Juan;4;San Juan;155
+4;San Juan;5;Ermitagaña-Mendebaldea;1601
+4;San Juan;6;Milagrosa-Azpilagaña;1386
+4;San Juan;7;Lezkairu;716
+4;San Juan;8;Mendillorri;680
+4;San Juan;9;Rochapea;1330
+4;San Juan;10;Txantrea;1296
+4;San Juan;11;San Jorge;1151
+4;San Juan;12;Buztintxuri;544
+4;San Juan;13;Etxabakoitz;844
+4;San Juan;14;Zizur Mayor;490
+4;San Juan;15;Barañáin;1235
+4;San Juan;16;Cendea de Cizur;1153
+4;San Juan;17;Burlada;1310
+4;San Juan;18;Villava;433
+4;San Juan;19;Berriozar;577
+4;San Juan;20;Orkoien;681
+4;San Juan;21;Berrioplano;891
+4;San Juan;22;Aranguren;1468
+4;San Juan;23;Egüés;1415
+4;San Juan;24;Huarte;492
+4;San Juan;25;Ezcabarte;409
+4;San Juan;26;Noáin;458
+5;Ermitagaña-Mendebaldea;1;Casco Viejo;1015
+5;Ermitagaña-Mendebaldea;2;Ensanche;2349
+5;Ermitagaña-Mendebaldea;3;Iturrama;1911
+5;Ermitagaña-Mendebaldea;4;San Juan;1601
+5;Ermitagaña-Mendebaldea;5;Ermitagaña-Mendebaldea;110
+5;Ermitagaña-Mendebaldea;6;Milagrosa-Azpilagaña;1887
+5;Ermitagaña-Mendebaldea;7;Lezkairu;901
+5;Ermitagaña-Mendebaldea;8;Mendillorri;1006
+5;Ermitagaña-Mendebaldea;9;Rochapea;1955
+5;Ermitagaña-Mendebaldea;10;Txantrea;1721
+5;Ermitagaña-Mendebaldea;11;San Jorge;1365
+5;Ermitagaña-Mendebaldea;12;Buztintxuri;752
+5;Ermitagaña-Mendebaldea;13;Etxabakoitz;881
+5;Ermitagaña-Mendebaldea;14;Zizur Mayor;628
+5;Ermitagaña-Mendebaldea;15;Barañáin;1573
+5;Ermitagaña-Mendebaldea;16;Cendea de Cizur;1480
+5;Ermitagaña-Mendebaldea;17;Burlada;1682
+5;Ermitagaña-Mendebaldea;18;Villava;554
+5;Ermitagaña-Mendebaldea;19;Berriozar;740
+5;Ermitagaña-Mendebaldea;20;Orkoien;875
+5;Ermitagaña-Mendebaldea;21;Berrioplano;1144
+5;Ermitagaña-Mendebaldea;22;Aranguren;1884
+5;Ermitagaña-Mendebaldea;23;Egüés;1817
+5;Ermitagaña-Mendebaldea;24;Huarte;634
+5;Ermitagaña-Mendebaldea;25;Ezcabarte;525
+5;Ermitagaña-Mendebaldea;26;Noáin;590
+6;Milagrosa-Azpilagaña;1;Casco Viejo;911
+6;Milagrosa-Azpilagaña;2;Ensanche;2362
+6;Milagrosa-Azpilagaña;3;Iturrama;1691
+6;Milagrosa-Azpilagaña;4;San Juan;1386
+6;Milagrosa-Azpilagaña;5;Ermitagaña-Mendebaldea;1887
+6;Milagrosa-Azpilagaña;6;Milagrosa-Azpilagaña;221
+6;Milagrosa-Azpilagaña;7;Lezkairu;841
+6;Milagrosa-Azpilagaña;8;Mendillorri;791
+6;Milagrosa-Azpilagaña;9;Rochapea;1546
+6;Milagrosa-Azpilagaña;10;Txantrea;1517
+6;Milagrosa-Azpilagaña;11;San Jorge;1355
+6;Milagrosa-Azpilagaña;12;Buztintxuri;635
+6;Milagrosa-Azpilagaña;13;Etxabakoitz;1000
+6;Milagrosa-Azpilagaña;14;Zizur Mayor;575
+6;Milagrosa-Azpilagaña;15;Barañáin;1449
+6;Milagrosa-Azpilagaña;16;Cendea de Cizur;1352
+6;Milagrosa-Azpilagaña;17;Burlada;1537
+6;Milagrosa-Azpilagaña;18;Villava;508
+6;Milagrosa-Azpilagaña;19;Berriozar;676
+6;Milagrosa-Azpilagaña;20;Orkoien;799
+6;Milagrosa-Azpilagaña;21;Berrioplano;1045
+6;Milagrosa-Azpilagaña;22;Aranguren;1721
+6;Milagrosa-Azpilagaña;23;Egüés;1660
+6;Milagrosa-Azpilagaña;24;Huarte;577
+6;Milagrosa-Azpilagaña;25;Ezcabarte;479
+6;Milagrosa-Azpilagaña;26;Noáin;537
+7;Lezkairu;1;Casco Viejo;462
+7;Lezkairu;2;Ensanche;1133
+7;Lezkairu;3;Iturrama;864
+7;Lezkairu;4;San Juan;716
+7;Lezkairu;5;Ermitagaña-Mendebaldea;901
+7;Lezkairu;6;Milagrosa-Azpilagaña;841
+7;Lezkairu;7;Lezkairu;38
+7;Lezkairu;8;Mendillorri;430
+7;Lezkairu;9;Rochapea;838
+7;Lezkairu;10;Txantrea;777
+7;Lezkairu;11;San Jorge;654
+7;Lezkairu;12;Buztintxuri;332
+7;Lezkairu;13;Etxabakoitz;454
+7;Lezkairu;14;Zizur Mayor;289
+7;Lezkairu;15;Barañáin;726
+7;Lezkairu;16;Cendea de Cizur;680
+7;Lezkairu;17;Burlada;773
+7;Lezkairu;18;Villava;255
+7;Lezkairu;19;Berriozar;340
+7;Lezkairu;20;Orkoien;402
+7;Lezkairu;21;Berrioplano;525
+7;Lezkairu;22;Aranguren;865
+7;Lezkairu;23;Egüés;835
+7;Lezkairu;24;Huarte;291
+7;Lezkairu;25;Ezcabarte;241
+7;Lezkairu;26;Noáin;271
+8;Mendillorri;1;Casco Viejo;456
+8;Mendillorri;2;Ensanche;1253
+8;Mendillorri;3;Iturrama;841
+8;Mendillorri;4;San Juan;680
+8;Mendillorri;5;Ermitagaña-Mendebaldea;1006
+8;Mendillorri;6;Milagrosa-Azpilagaña;791
+8;Mendillorri;7;Lezkairu;430
+8;Mendillorri;8;Mendillorri;80
+8;Mendillorri;9;Rochapea;718
+8;Mendillorri;10;Txantrea;753
+8;Mendillorri;11;San Jorge;715
+8;Mendillorri;12;Buztintxuri;307
+8;Mendillorri;13;Etxabakoitz;559
+8;Mendillorri;14;Zizur Mayor;291
+8;Mendillorri;15;Barañáin;736
+8;Mendillorri;16;Cendea de Cizur;684
+8;Mendillorri;17;Burlada;777
+8;Mendillorri;18;Villava;257
+8;Mendillorri;19;Berriozar;342
+8;Mendillorri;20;Orkoien;404
+8;Mendillorri;21;Berrioplano;529
+8;Mendillorri;22;Aranguren;871
+8;Mendillorri;23;Egüés;839
+8;Mendillorri;24;Huarte;291
+8;Mendillorri;25;Ezcabarte;243
+8;Mendillorri;26;Noáin;271
+9;Rochapea;1;Casco Viejo;891
+9;Rochapea;2;Ensanche;2435
+9;Rochapea;3;Iturrama;1642
+9;Rochapea;4;San Juan;1330
+9;Rochapea;5;Ermitagaña-Mendebaldea;1955
+9;Rochapea;6;Milagrosa-Azpilagaña;1546
+9;Rochapea;7;Lezkairu;838
+9;Rochapea;8;Mendillorri;718
+9;Rochapea;9;Rochapea;297
+9;Rochapea;10;Txantrea;1470
+9;Rochapea;11;San Jorge;1390
+9;Rochapea;12;Buztintxuri;600
+9;Rochapea;13;Etxabakoitz;1082
+9;Rochapea;14;Zizur Mayor;568
+9;Rochapea;15;Barañáin;1436
+9;Rochapea;16;Cendea de Cizur;1334
+9;Rochapea;17;Burlada;1516
+9;Rochapea;18;Villava;501
+9;Rochapea;19;Berriozar;667
+9;Rochapea;20;Orkoien;788
+9;Rochapea;21;Berrioplano;1031
+9;Rochapea;22;Aranguren;1698
+9;Rochapea;23;Egüés;1637
+9;Rochapea;24;Huarte;568
+9;Rochapea;25;Ezcabarte;473
+9;Rochapea;26;Noáin;529
+10;Txantrea;1;Casco Viejo;847
+10;Txantrea;2;Ensanche;2157
+10;Txantrea;3;Iturrama;1576
+10;Txantrea;4;San Juan;1296
+10;Txantrea;5;Ermitagaña-Mendebaldea;1721
+10;Txantrea;6;Milagrosa-Azpilagaña;1517
+10;Txantrea;7;Lezkairu;777
+10;Txantrea;8;Mendillorri;753
+10;Txantrea;9;Rochapea;1470
+10;Txantrea;10;Txantrea;169
+10;Txantrea;11;San Jorge;1240
+10;Txantrea;12;Buztintxuri;596
+10;Txantrea;13;Etxabakoitz;898
+10;Txantrea;14;Zizur Mayor;533
+10;Txantrea;15;Barañáin;1342
+10;Txantrea;16;Cendea de Cizur;1254
+10;Txantrea;17;Burlada;1425
+10;Txantrea;18;Villava;470
+10;Txantrea;19;Berriozar;627
+10;Txantrea;20;Orkoien;741
+10;Txantrea;21;Berrioplano;969
+10;Txantrea;22;Aranguren;1596
+10;Txantrea;23;Egüés;1539
+10;Txantrea;24;Huarte;535
+10;Txantrea;25;Ezcabarte;445
+10;Txantrea;26;Noáin;498
+11;San Jorge;1;Casco Viejo;733
+11;San Jorge;2;Ensanche;1723
+11;San Jorge;3;Iturrama;1378
+11;San Jorge;4;San Juan;1151
+11;San Jorge;5;Ermitagaña-Mendebaldea;1365
+11;San Jorge;6;Milagrosa-Azpilagaña;1355
+11;San Jorge;7;Lezkairu;654
+11;San Jorge;8;Mendillorri;715
+11;San Jorge;9;Rochapea;1390
+11;San Jorge;10;Txantrea;1240
+11;San Jorge;11;San Jorge;66
+11;San Jorge;12;Buztintxuri;539
+11;San Jorge;13;Etxabakoitz;658
+11;San Jorge;14;Zizur Mayor;455
+11;San Jorge;15;Barañáin;1140
+11;San Jorge;16;Cendea de Cizur;1072
+11;San Jorge;17;Burlada;1218
+11;San Jorge;18;Villava;401
+11;San Jorge;19;Berriozar;536
+11;San Jorge;20;Orkoien;633
+11;San Jorge;21;Berrioplano;828
+11;San Jorge;22;Aranguren;1364
+11;San Jorge;23;Egüés;1315
+11;San Jorge;24;Huarte;459
+11;San Jorge;25;Ezcabarte;380
+11;San Jorge;26;Noáin;427
+12;Buztintxuri;1;Casco Viejo;359
+12;Buztintxuri;2;Ensanche;940
+12;Buztintxuri;3;Iturrama;665
+12;Buztintxuri;4;San Juan;544
+12;Buztintxuri;5;Ermitagaña-Mendebaldea;752
+12;Buztintxuri;6;Milagrosa-Azpilagaña;635
+12;Buztintxuri;7;Lezkairu;332
+12;Buztintxuri;8;Mendillorri;307
+12;Buztintxuri;9;Rochapea;600
+12;Buztintxuri;10;Txantrea;596
+12;Buztintxuri;11;San Jorge;539
+12;Buztintxuri;12;Buztintxuri;37
+12;Buztintxuri;13;Etxabakoitz;402
+12;Buztintxuri;14;Zizur Mayor;227
+12;Buztintxuri;15;Barañáin;572
+12;Buztintxuri;16;Cendea de Cizur;533
+12;Buztintxuri;17;Burlada;606
+12;Buztintxuri;18;Villava;200
+12;Buztintxuri;19;Berriozar;267
+12;Buztintxuri;20;Orkoien;315
+12;Buztintxuri;21;Berrioplano;412
+12;Buztintxuri;22;Aranguren;679
+12;Buztintxuri;23;Egüés;655
+12;Buztintxuri;24;Huarte;227
+12;Buztintxuri;25;Ezcabarte;189
+12;Buztintxuri;26;Noáin;212
+13;Etxabakoitz;1;Casco Viejo;524
+13;Etxabakoitz;2;Ensanche;1122
+13;Etxabakoitz;3;Iturrama;994
+13;Etxabakoitz;4;San Juan;844
+13;Etxabakoitz;5;Ermitagaña-Mendebaldea;881
+13;Etxabakoitz;6;Milagrosa-Azpilagaña;1000
+13;Etxabakoitz;7;Lezkairu;454
+13;Etxabakoitz;8;Mendillorri;559
+13;Etxabakoitz;9;Rochapea;1082
+13;Etxabakoitz;10;Txantrea;898
+13;Etxabakoitz;11;San Jorge;658
+13;Etxabakoitz;12;Buztintxuri;402
+13;Etxabakoitz;13;Etxabakoitz;12
+13;Etxabakoitz;14;Zizur Mayor;320
+13;Etxabakoitz;15;Barañáin;798
+13;Etxabakoitz;16;Cendea de Cizur;755
+13;Etxabakoitz;17;Burlada;858
+13;Etxabakoitz;18;Villava;282
+13;Etxabakoitz;19;Berriozar;378
+13;Etxabakoitz;20;Orkoien;446
+13;Etxabakoitz;21;Berrioplano;584
+13;Etxabakoitz;22;Aranguren;961
+13;Etxabakoitz;23;Egüés;927
+13;Etxabakoitz;24;Huarte;324
+13;Etxabakoitz;25;Ezcabarte;268
+13;Etxabakoitz;26;Noáin;301
+14;Zizur Mayor;1;Casco Viejo;318
+14;Zizur Mayor;2;Ensanche;789
+14;Zizur Mayor;3;Iturrama;593
+14;Zizur Mayor;4;San Juan;490
+14;Zizur Mayor;5;Ermitagaña-Mendebaldea;628
+14;Zizur Mayor;6;Milagrosa-Azpilagaña;575
+14;Zizur Mayor;7;Lezkairu;289
+14;Zizur Mayor;8;Mendillorri;291
+14;Zizur Mayor;9;Rochapea;568
+14;Zizur Mayor;10;Txantrea;533
+14;Zizur Mayor;11;San Jorge;455
+14;Zizur Mayor;12;Buztintxuri;227
+14;Zizur Mayor;13;Etxabakoitz;320
+14;Zizur Mayor;14;Zizur Mayor;2340
+14;Zizur Mayor;15;Barañáin;1380
+14;Zizur Mayor;16;Cendea de Cizur;5100
+14;Zizur Mayor;17;Burlada;204
+14;Zizur Mayor;18;Villava;59
+14;Zizur Mayor;19;Berriozar;78
+14;Zizur Mayor;20;Orkoien;1140
+14;Zizur Mayor;21;Berrioplano;336
+14;Zizur Mayor;22;Aranguren;690
+14;Zizur Mayor;23;Egüés;282
+14;Zizur Mayor;24;Huarte;93
+14;Zizur Mayor;25;Ezcabarte;150
+14;Zizur Mayor;26;Noáin;483
+15;Barañáin;1;Casco Viejo;800
+15;Barañáin;2;Ensanche;1976
+15;Barañáin;3;Iturrama;1493
+15;Barañáin;4;San Juan;1235
+15;Barañáin;5;Ermitagaña-Mendebaldea;1573
+15;Barañáin;6;Milagrosa-Azpilagaña;1449
+15;Barañáin;7;Lezkairu;726
+15;Barañáin;8;Mendillorri;736
+15;Barañáin;9;Rochapea;1436
+15;Barañáin;10;Txantrea;1342
+15;Barañáin;11;San Jorge;1140
+15;Barañáin;12;Buztintxuri;572
+15;Barañáin;13;Etxabakoitz;798
+15;Barañáin;14;Zizur Mayor;1380
+15;Barañáin;15;Barañáin;1920
+15;Barañáin;16;Cendea de Cizur;2280
+15;Barañáin;17;Burlada;357
+15;Barañáin;18;Villava;150
+15;Barañáin;19;Berriozar;282
+15;Barañáin;20;Orkoien;2130
+15;Barañáin;21;Berrioplano;525
+15;Barañáin;22;Aranguren;780
+15;Barañáin;23;Egüés;426
+15;Barañáin;24;Huarte;204
+15;Barañáin;25;Ezcabarte;279
+15;Barañáin;26;Noáin;516
+16;Cendea de Cizur;1;Casco Viejo;748
+16;Cendea de Cizur;2;Ensanche;1859
+16;Cendea de Cizur;3;Iturrama;1395
+16;Cendea de Cizur;4;San Juan;1153
+16;Cendea de Cizur;5;Ermitagaña-Mendebaldea;1480
+16;Cendea de Cizur;6;Milagrosa-Azpilagaña;1352
+16;Cendea de Cizur;7;Lezkairu;680
+16;Cendea de Cizur;8;Mendillorri;684
+16;Cendea de Cizur;9;Rochapea;1334
+16;Cendea de Cizur;10;Txantrea;1254
+16;Cendea de Cizur;11;San Jorge;1072
+16;Cendea de Cizur;12;Buztintxuri;533
+16;Cendea de Cizur;13;Etxabakoitz;755
+16;Cendea de Cizur;14;Zizur Mayor;5100
+16;Cendea de Cizur;15;Barañáin;2280
+16;Cendea de Cizur;16;Cendea de Cizur;5280
+16;Cendea de Cizur;17;Burlada;780
+16;Cendea de Cizur;18;Villava;303
+16;Cendea de Cizur;19;Berriozar;441
+16;Cendea de Cizur;20;Orkoien;1200
+16;Cendea de Cizur;21;Berrioplano;579
+16;Cendea de Cizur;22;Aranguren;3660
+16;Cendea de Cizur;23;Egüés;1110
+16;Cendea de Cizur;24;Huarte;399
+16;Cendea de Cizur;25;Ezcabarte;309
+16;Cendea de Cizur;26;Noáin;3720
+17;Burlada;1;Casco Viejo;850
+17;Burlada;2;Ensanche;2112
+17;Burlada;3;Iturrama;1586
+17;Burlada;4;San Juan;1310
+17;Burlada;5;Ermitagaña-Mendebaldea;1682
+17;Burlada;6;Milagrosa-Azpilagaña;1537
+17;Burlada;7;Lezkairu;773
+17;Burlada;8;Mendillorri;777
+17;Burlada;9;Rochapea;1516
+17;Burlada;10;Txantrea;1425
+17;Burlada;11;San Jorge;1218
+17;Burlada;12;Buztintxuri;606
+17;Burlada;13;Etxabakoitz;858
+17;Burlada;14;Zizur Mayor;204
+17;Burlada;15;Barañáin;357
+17;Burlada;16;Cendea de Cizur;780
+17;Burlada;17;Burlada;2400
+17;Burlada;18;Villava;1080
+17;Burlada;19;Berriozar;381
+17;Burlada;20;Orkoien;402
+17;Burlada;21;Berrioplano;660
+17;Burlada;22;Aranguren;1290
+17;Burlada;23;Egüés;3240
+17;Burlada;24;Huarte;1170
+17;Burlada;25;Ezcabarte;519
+17;Burlada;26;Noáin;438
+18;Villava;1;Casco Viejo;280
+18;Villava;2;Ensanche;696
+18;Villava;3;Iturrama;524
+18;Villava;4;San Juan;433
+18;Villava;5;Ermitagaña-Mendebaldea;554
+18;Villava;6;Milagrosa-Azpilagaña;508
+18;Villava;7;Lezkairu;255
+18;Villava;8;Mendillorri;257
+18;Villava;9;Rochapea;501
+18;Villava;10;Txantrea;470
+18;Villava;11;San Jorge;401
+18;Villava;12;Buztintxuri;200
+18;Villava;13;Etxabakoitz;282
+18;Villava;14;Zizur Mayor;59
+18;Villava;15;Barañáin;150
+18;Villava;16;Cendea de Cizur;303
+18;Villava;17;Burlada;1080
+18;Villava;18;Villava;96
+18;Villava;19;Berriozar;93
+18;Villava;20;Orkoien;159
+18;Villava;21;Berrioplano;201
+18;Villava;22;Aranguren;450
+18;Villava;23;Egüés;2040
+18;Villava;24;Huarte;576
+18;Villava;25;Ezcabarte;270
+18;Villava;26;Noáin;150
+19;Berriozar;1;Casco Viejo;374
+19;Berriozar;2;Ensanche;929
+19;Berriozar;3;Iturrama;698
+19;Berriozar;4;San Juan;577
+19;Berriozar;5;Ermitagaña-Mendebaldea;740
+19;Berriozar;6;Milagrosa-Azpilagaña;676
+19;Berriozar;7;Lezkairu;340
+19;Berriozar;8;Mendillorri;342
+19;Berriozar;9;Rochapea;667
+19;Berriozar;10;Txantrea;627
+19;Berriozar;11;San Jorge;536
+19;Berriozar;12;Buztintxuri;267
+19;Berriozar;13;Etxabakoitz;378
+19;Berriozar;14;Zizur Mayor;78
+19;Berriozar;15;Barañáin;282
+19;Berriozar;16;Cendea de Cizur;441
+19;Berriozar;17;Burlada;381
+19;Berriozar;18;Villava;93
+19;Berriozar;19;Berriozar;354
+19;Berriozar;20;Orkoien;438
+19;Berriozar;21;Berrioplano;1380
+19;Berriozar;22;Aranguren;396
+19;Berriozar;23;Egüés;303
+19;Berriozar;24;Huarte;150
+19;Berriozar;25;Ezcabarte;810
+19;Berriozar;26;Noáin;192
+20;Orkoien;1;Casco Viejo;442
+20;Orkoien;2;Ensanche;1098
+20;Orkoien;3;Iturrama;825
+20;Orkoien;4;San Juan;681
+20;Orkoien;5;Ermitagaña-Mendebaldea;875
+20;Orkoien;6;Milagrosa-Azpilagaña;799
+20;Orkoien;7;Lezkairu;402
+20;Orkoien;8;Mendillorri;404
+20;Orkoien;9;Rochapea;788
+20;Orkoien;10;Txantrea;741
+20;Orkoien;11;San Jorge;633
+20;Orkoien;12;Buztintxuri;315
+20;Orkoien;13;Etxabakoitz;446
+20;Orkoien;14;Zizur Mayor;1140
+20;Orkoien;15;Barañáin;2130
+20;Orkoien;16;Cendea de Cizur;1200
+20;Orkoien;17;Burlada;402
+20;Orkoien;18;Villava;159
+20;Orkoien;19;Berriozar;438
+20;Orkoien;20;Orkoien;2280
+20;Orkoien;21;Berrioplano;1440
+20;Orkoien;22;Aranguren;480
+20;Orkoien;23;Egüés;474
+20;Orkoien;24;Huarte;189
+20;Orkoien;25;Ezcabarte;1080
+20;Orkoien;26;Noáin;309
+21;Berrioplano;1;Casco Viejo;578
+21;Berrioplano;2;Ensanche;1436
+21;Berrioplano;3;Iturrama;1078
+21;Berrioplano;4;San Juan;891
+21;Berrioplano;5;Ermitagaña-Mendebaldea;1144
+21;Berrioplano;6;Milagrosa-Azpilagaña;1045
+21;Berrioplano;7;Lezkairu;525
+21;Berrioplano;8;Mendillorri;529
+21;Berrioplano;9;Rochapea;1031
+21;Berrioplano;10;Txantrea;969
+21;Berrioplano;11;San Jorge;828
+21;Berrioplano;12;Buztintxuri;412
+21;Berrioplano;13;Etxabakoitz;584
+21;Berrioplano;14;Zizur Mayor;336
+21;Berrioplano;15;Barañáin;525
+21;Berrioplano;16;Cendea de Cizur;579
+21;Berrioplano;17;Burlada;660
+21;Berrioplano;18;Villava;201
+21;Berrioplano;19;Berriozar;1380
+21;Berrioplano;20;Orkoien;1440
+21;Berrioplano;21;Berrioplano;1500
+21;Berrioplano;22;Aranguren;495
+21;Berrioplano;23;Egüés;408
+21;Berrioplano;24;Huarte;258
+21;Berrioplano;25;Ezcabarte;660
+21;Berrioplano;26;Noáin;249
+22;Aranguren;1;Casco Viejo;952
+22;Aranguren;2;Ensanche;2366
+22;Aranguren;3;Iturrama;1776
+22;Aranguren;4;San Juan;1468
+22;Aranguren;5;Ermitagaña-Mendebaldea;1884
+22;Aranguren;6;Milagrosa-Azpilagaña;1721
+22;Aranguren;7;Lezkairu;865
+22;Aranguren;8;Mendillorri;871
+22;Aranguren;9;Rochapea;1698
+22;Aranguren;10;Txantrea;1596
+22;Aranguren;11;San Jorge;1364
+22;Aranguren;12;Buztintxuri;679
+22;Aranguren;13;Etxabakoitz;961
+22;Aranguren;14;Zizur Mayor;690
+22;Aranguren;15;Barañáin;780
+22;Aranguren;16;Cendea de Cizur;3660
+22;Aranguren;17;Burlada;1290
+22;Aranguren;18;Villava;450
+22;Aranguren;19;Berriozar;396
+22;Aranguren;20;Orkoien;480
+22;Aranguren;21;Berrioplano;495
+22;Aranguren;22;Aranguren;4020
+22;Aranguren;23;Egüés;3690
+22;Aranguren;24;Huarte;660
+22;Aranguren;25;Ezcabarte;339
+22;Aranguren;26;Noáin;1680
+23;Egüés;1;Casco Viejo;918
+23;Egüés;2;Ensanche;2281
+23;Egüés;3;Iturrama;1713
+23;Egüés;4;San Juan;1415
+23;Egüés;5;Ermitagaña-Mendebaldea;1817
+23;Egüés;6;Milagrosa-Azpilagaña;1660
+23;Egüés;7;Lezkairu;835
+23;Egüés;8;Mendillorri;839
+23;Egüés;9;Rochapea;1637
+23;Egüés;10;Txantrea;1539
+23;Egüés;11;San Jorge;1315
+23;Egüés;12;Buztintxuri;655
+23;Egüés;13;Etxabakoitz;927
+23;Egüés;14;Zizur Mayor;282
+23;Egüés;15;Barañáin;426
+23;Egüés;16;Cendea de Cizur;1110
+23;Egüés;17;Burlada;3240
+23;Egüés;18;Villava;2040
+23;Egüés;19;Berriozar;303
+23;Egüés;20;Orkoien;474
+23;Egüés;21;Berrioplano;408
+23;Egüés;22;Aranguren;3690
+23;Egüés;23;Egüés;10200
+23;Egüés;24;Huarte;2790
+23;Egüés;25;Ezcabarte;498
+23;Egüés;26;Noáin;690
+24;Huarte;1;Casco Viejo;319
+24;Huarte;2;Ensanche;796
+24;Huarte;3;Iturrama;596
+24;Huarte;4;San Juan;492
+24;Huarte;5;Ermitagaña-Mendebaldea;634
+24;Huarte;6;Milagrosa-Azpilagaña;577
+24;Huarte;7;Lezkairu;291
+24;Huarte;8;Mendillorri;291
+24;Huarte;9;Rochapea;568
+24;Huarte;10;Txantrea;535
+24;Huarte;11;San Jorge;459
+24;Huarte;12;Buztintxuri;227
+24;Huarte;13;Etxabakoitz;324
+24;Huarte;14;Zizur Mayor;93
+24;Huarte;15;Barañáin;204
+24;Huarte;16;Cendea de Cizur;399
+24;Huarte;17;Burlada;1170
+24;Huarte;18;Villava;576
+24;Huarte;19;Berriozar;150
+24;Huarte;20;Orkoien;189
+24;Huarte;21;Berrioplano;258
+24;Huarte;22;Aranguren;660
+24;Huarte;23;Egüés;2790
+24;Huarte;24;Huarte;720
+24;Huarte;25;Ezcabarte;438
+24;Huarte;26;Noáin;192
+25;Ezcabarte;1;Casco Viejo;265
+25;Ezcabarte;2;Ensanche;659
+25;Ezcabarte;3;Iturrama;495
+25;Ezcabarte;4;San Juan;409
+25;Ezcabarte;5;Ermitagaña-Mendebaldea;525
+25;Ezcabarte;6;Milagrosa-Azpilagaña;479
+25;Ezcabarte;7;Lezkairu;241
+25;Ezcabarte;8;Mendillorri;243
+25;Ezcabarte;9;Rochapea;473
+25;Ezcabarte;10;Txantrea;445
+25;Ezcabarte;11;San Jorge;380
+25;Ezcabarte;12;Buztintxuri;189
+25;Ezcabarte;13;Etxabakoitz;268
+25;Ezcabarte;14;Zizur Mayor;150
+25;Ezcabarte;15;Barañáin;279
+25;Ezcabarte;16;Cendea de Cizur;309
+25;Ezcabarte;17;Burlada;519
+25;Ezcabarte;18;Villava;270
+25;Ezcabarte;19;Berriozar;810
+25;Ezcabarte;20;Orkoien;1080
+25;Ezcabarte;21;Berrioplano;660
+25;Ezcabarte;22;Aranguren;339
+25;Ezcabarte;23;Egüés;498
+25;Ezcabarte;24;Huarte;438
+25;Ezcabarte;25;Ezcabarte;240
+25;Ezcabarte;26;Noáin;144
+26;Noáin;1;Casco Viejo;297
+26;Noáin;2;Ensanche;740
+26;Noáin;3;Iturrama;555
+26;Noáin;4;San Juan;458
+26;Noáin;5;Ermitagaña-Mendebaldea;590
+26;Noáin;6;Milagrosa-Azpilagaña;537
+26;Noáin;7;Lezkairu;271
+26;Noáin;8;Mendillorri;271
+26;Noáin;9;Rochapea;529
+26;Noáin;10;Txantrea;498
+26;Noáin;11;San Jorge;427
+26;Noáin;12;Buztintxuri;212
+26;Noáin;13;Etxabakoitz;301
+26;Noáin;14;Zizur Mayor;483
+26;Noáin;15;Barañáin;516
+26;Noáin;16;Cendea de Cizur;3720
+26;Noáin;17;Burlada;438
+26;Noáin;18;Villava;150
+26;Noáin;19;Berriozar;192
+26;Noáin;20;Orkoien;309
+26;Noáin;21;Berrioplano;249
+26;Noáin;22;Aranguren;1680
+26;Noáin;23;Egüés;690
+26;Noáin;24;Huarte;192
+26;Noáin;25;Ezcabarte;144
+26;Noáin;26;Noáin;1800
+101;Ext_Sur_Zaragoza;102;Ext_Norte_Francia;8500
+102;Ext_Norte_Francia;101;Ext_Sur_Zaragoza;8500
+101;Ext_Sur_Zaragoza;103;Ext_Noroeste_Vitoria;6000
+103;Ext_Noroeste_Vitoria;101;Ext_Sur_Zaragoza;6000
+104;Ext_Este_Jaca;103;Ext_Noroeste_Vitoria;2500
+103;Ext_Noroeste_Vitoria;104;Ext_Este_Jaca;2500
+105;Ext_Oeste_Logroño;102;Ext_Norte_Francia;1500
+102;Ext_Norte_Francia;105;Ext_Oeste_Logroño;1500
+105;Ext_Oeste_Logroño;104;Ext_Este_Jaca;1000
+104;Ext_Este_Jaca;105;Ext_Oeste_Logroño;1000
+101;Ext_Sur_Zaragoza;1;Casco Viejo;625
+1;Casco Viejo;101;Ext_Sur_Zaragoza;625
+101;Ext_Sur_Zaragoza;2;Ensanche;2000
+2;Ensanche;101;Ext_Sur_Zaragoza;2000
+101;Ext_Sur_Zaragoza;3;Iturrama;1125
+3;Iturrama;101;Ext_Sur_Zaragoza;1125
+101;Ext_Sur_Zaragoza;4;San Juan;875
+4;San Juan;101;Ext_Sur_Zaragoza;875
+101;Ext_Sur_Zaragoza;5;Ermitagaña-Mendebaldea;1625
+5;Ermitagaña-Mendebaldea;101;Ext_Sur_Zaragoza;1625
+101;Ext_Sur_Zaragoza;6;Milagrosa-Azpilagaña;1000
+6;Milagrosa-Azpilagaña;101;Ext_Sur_Zaragoza;1000
+101;Ext_Sur_Zaragoza;7;Lezkairu;625
+7;Lezkairu;101;Ext_Sur_Zaragoza;625
+101;Ext_Sur_Zaragoza;8;Mendillorri;375
+8;Mendillorri;101;Ext_Sur_Zaragoza;375
+101;Ext_Sur_Zaragoza;9;Rochapea;750
+9;Rochapea;101;Ext_Sur_Zaragoza;750
+101;Ext_Sur_Zaragoza;10;Txantrea;1000
+10;Txantrea;101;Ext_Sur_Zaragoza;1000
+101;Ext_Sur_Zaragoza;11;San Jorge;1125
+11;San Jorge;101;Ext_Sur_Zaragoza;1125
+101;Ext_Sur_Zaragoza;12;Buztintxuri;375
+12;Buztintxuri;101;Ext_Sur_Zaragoza;375
+101;Ext_Sur_Zaragoza;13;Etxabakoitz;1000
+13;Etxabakoitz;101;Ext_Sur_Zaragoza;1000
+105;Ext_Oeste_Logroño;1;Casco Viejo;825
+1;Casco Viejo;105;Ext_Oeste_Logroño;825
+105;Ext_Oeste_Logroño;2;Ensanche;2640
+2;Ensanche;105;Ext_Oeste_Logroño;2640
+105;Ext_Oeste_Logroño;3;Iturrama;1485
+3;Iturrama;105;Ext_Oeste_Logroño;1485
+105;Ext_Oeste_Logroño;4;San Juan;1155
+4;San Juan;105;Ext_Oeste_Logroño;1155
+105;Ext_Oeste_Logroño;5;Ermitagaña-Mendebaldea;2145
+5;Ermitagaña-Mendebaldea;105;Ext_Oeste_Logroño;2145
+105;Ext_Oeste_Logroño;6;Milagrosa-Azpilagaña;1320
+6;Milagrosa-Azpilagaña;105;Ext_Oeste_Logroño;1320
+105;Ext_Oeste_Logroño;7;Lezkairu;825
+7;Lezkairu;105;Ext_Oeste_Logroño;825
+105;Ext_Oeste_Logroño;8;Mendillorri;495
+8;Mendillorri;105;Ext_Oeste_Logroño;495
+105;Ext_Oeste_Logroño;9;Rochapea;990
+9;Rochapea;105;Ext_Oeste_Logroño;990
+105;Ext_Oeste_Logroño;10;Txantrea;1320
+10;Txantrea;105;Ext_Oeste_Logroño;1320
+105;Ext_Oeste_Logroño;11;San Jorge;1485
+11;San Jorge;105;Ext_Oeste_Logroño;1485
+105;Ext_Oeste_Logroño;12;Buztintxuri;495
+12;Buztintxuri;105;Ext_Oeste_Logroño;495
+105;Ext_Oeste_Logroño;13;Etxabakoitz;1320
+13;Etxabakoitz;105;Ext_Oeste_Logroño;1320
+103;Ext_Noroeste_Vitoria;1;Casco Viejo;400
+1;Casco Viejo;103;Ext_Noroeste_Vitoria;400
+103;Ext_Noroeste_Vitoria;2;Ensanche;1280
+2;Ensanche;103;Ext_Noroeste_Vitoria;1280
+103;Ext_Noroeste_Vitoria;3;Iturrama;720
+3;Iturrama;103;Ext_Noroeste_Vitoria;720
+103;Ext_Noroeste_Vitoria;4;San Juan;560
+4;San Juan;103;Ext_Noroeste_Vitoria;560
+103;Ext_Noroeste_Vitoria;5;Ermitagaña-Mendebaldea;1040
+5;Ermitagaña-Mendebaldea;103;Ext_Noroeste_Vitoria;1040
+103;Ext_Noroeste_Vitoria;6;Milagrosa-Azpilagaña;640
+6;Milagrosa-Azpilagaña;103;Ext_Noroeste_Vitoria;640
+103;Ext_Noroeste_Vitoria;7;Lezkairu;400
+7;Lezkairu;103;Ext_Noroeste_Vitoria;400
+103;Ext_Noroeste_Vitoria;8;Mendillorri;240
+8;Mendillorri;103;Ext_Noroeste_Vitoria;240
+103;Ext_Noroeste_Vitoria;9;Rochapea;480
+9;Rochapea;103;Ext_Noroeste_Vitoria;480
+103;Ext_Noroeste_Vitoria;10;Txantrea;640
+10;Txantrea;103;Ext_Noroeste_Vitoria;640
+103;Ext_Noroeste_Vitoria;11;San Jorge;720
+11;San Jorge;103;Ext_Noroeste_Vitoria;720
+103;Ext_Noroeste_Vitoria;12;Buztintxuri;240
+12;Buztintxuri;103;Ext_Noroeste_Vitoria;240
+103;Ext_Noroeste_Vitoria;13;Etxabakoitz;640
+13;Etxabakoitz;103;Ext_Noroeste_Vitoria;640
+102;Ext_Norte_Francia;1;Casco Viejo;200
+1;Casco Viejo;102;Ext_Norte_Francia;200
+102;Ext_Norte_Francia;2;Ensanche;640
+2;Ensanche;102;Ext_Norte_Francia;640
+102;Ext_Norte_Francia;3;Iturrama;360
+3;Iturrama;102;Ext_Norte_Francia;360
+102;Ext_Norte_Francia;4;San Juan;280
+4;San Juan;102;Ext_Norte_Francia;280
+102;Ext_Norte_Francia;5;Ermitagaña-Mendebaldea;520
+5;Ermitagaña-Mendebaldea;102;Ext_Norte_Francia;520
+102;Ext_Norte_Francia;6;Milagrosa-Azpilagaña;320
+6;Milagrosa-Azpilagaña;102;Ext_Norte_Francia;320
+102;Ext_Norte_Francia;7;Lezkairu;200
+7;Lezkairu;102;Ext_Norte_Francia;200
+102;Ext_Norte_Francia;8;Mendillorri;120
+8;Mendillorri;102;Ext_Norte_Francia;120
+102;Ext_Norte_Francia;9;Rochapea;240
+9;Rochapea;102;Ext_Norte_Francia;240
+102;Ext_Norte_Francia;10;Txantrea;320
+10;Txantrea;102;Ext_Norte_Francia;320
+102;Ext_Norte_Francia;11;San Jorge;360
+11;San Jorge;102;Ext_Norte_Francia;360
+102;Ext_Norte_Francia;12;Buztintxuri;120
+12;Buztintxuri;102;Ext_Norte_Francia;120
+102;Ext_Norte_Francia;13;Etxabakoitz;320
+13;Etxabakoitz;102;Ext_Norte_Francia;320
+106;Ext_Noreste_Aoiz;1;Casco Viejo;300
+1;Casco Viejo;106;Ext_Noreste_Aoiz;300
+106;Ext_Noreste_Aoiz;2;Ensanche;960
+2;Ensanche;106;Ext_Noreste_Aoiz;960
+106;Ext_Noreste_Aoiz;3;Iturrama;540
+3;Iturrama;106;Ext_Noreste_Aoiz;540
+106;Ext_Noreste_Aoiz;4;San Juan;420
+4;San Juan;106;Ext_Noreste_Aoiz;420
+106;Ext_Noreste_Aoiz;5;Ermitagaña-Mendebaldea;780
+5;Ermitagaña-Mendebaldea;106;Ext_Noreste_Aoiz;780
+106;Ext_Noreste_Aoiz;6;Milagrosa-Azpilagaña;480
+6;Milagrosa-Azpilagaña;106;Ext_Noreste_Aoiz;480
+106;Ext_Noreste_Aoiz;7;Lezkairu;300
+7;Lezkairu;106;Ext_Noreste_Aoiz;300
+106;Ext_Noreste_Aoiz;8;Mendillorri;180
+8;Mendillorri;106;Ext_Noreste_Aoiz;180
+106;Ext_Noreste_Aoiz;9;Rochapea;360
+9;Rochapea;106;Ext_Noreste_Aoiz;360
+106;Ext_Noreste_Aoiz;10;Txantrea;480
+10;Txantrea;106;Ext_Noreste_Aoiz;480
+106;Ext_Noreste_Aoiz;11;San Jorge;540
+11;San Jorge;106;Ext_Noreste_Aoiz;540
+106;Ext_Noreste_Aoiz;12;Buztintxuri;180
+12;Buztintxuri;106;Ext_Noreste_Aoiz;180
+106;Ext_Noreste_Aoiz;13;Etxabakoitz;480
+13;Etxabakoitz;106;Ext_Noreste_Aoiz;480
