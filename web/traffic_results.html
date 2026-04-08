@@ -243,7 +243,8 @@
     const dark_light = document.getElementById('dark_light');
     let selectedMetric = 'occupancy'; // Default
     let time = 0; // Global time
-
+    
+    
     // Evento Click para el botón
     btn.addEventListener('click', () => {
         window.isPaused = !window.isPaused;
@@ -264,7 +265,7 @@
     });
 
 
-    window.endPoint= "http://localhost:8001"
+    
 
     const map = (window.map = new maplibregl.Map({
         container: 'map',

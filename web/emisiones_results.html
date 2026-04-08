@@ -81,6 +81,9 @@
     let time = 0; // Global time
     const maxSimulationTime = 7200;
     const timeStep = 10;
+    
+
+
 
     // Evento Click para el botón
     btn.addEventListener('click', () => {
@@ -121,7 +124,7 @@
         updateLayer();
     });
 
-    window.endPoint= "http://localhost:8001"
+    
 
     const map = (window.map = new maplibregl.Map({
         container: 'map',
@@ -200,6 +203,7 @@
     document.getElementById('estilos').addEventListener('change', function (e) {
         map.setStyle(e.target.value);
     });
+
 </script>
 
 </body>

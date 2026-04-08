@@ -2,6 +2,7 @@
         // const endPoint= "ws://owsei.ddns.net:8001/"
         // const endPoint= "http://localhost:8000/"
         // const endPointDirecto="ws://localhost:8000/"
+        window.endPoint= "http://localhost:8001"
 
         // Reemplaza con tu token de Cesium Ion
        
@@ -17,6 +18,8 @@
         // variables para la comunicacion con el servidor
         let socket = null;
         let simulacionIniciada = false;
+
+        
 
         // funciones para el movimiento de la camara
         function flyToA10(){

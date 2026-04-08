@@ -359,6 +359,6 @@ def simulation_to_postgres():
 if __name__ == "__main__":
     net_file = os.path.join(ruta, "pamplona.net.xml")
     # net_to_postgres(net_file)
-    simulation_to_postgres()
+    # simulation_to_postgres()
 
 

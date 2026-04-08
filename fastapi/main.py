@@ -24,6 +24,8 @@ from pathlib import Path
 import pyarrow
 import json
 import psycopg2
+import clases.sumoClass as sumoClass 
+
 
 # sys.path.append(os.path.join(os.environ["SUMO_HOME"], "tools"))
 
@@ -39,28 +41,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-class BoundingBox(BaseModel):
-    west: float
-    south: float
-    east: float
-    north: float
-    road_types: Optional[List[str]] = ["motorway", "primary", "secondary", "tertiary", "residential"]
-
-class SimulationParams(BaseModel):
-    num_vehicles: int = 50
-    duration_sec: int = 300
-    # Lista de IDs de "edges" (vías) prohibidas
-    blocked_edges: List[str] = []
-
-class  MensajeSocket(BaseModel):
-    mensaje: str
-    color: str
-    tipo: str
-
-class configuracionSumo(BaseModel):
-    num_vehicles: int = 1000
-    duration_sec: int = 3600
-    fringe_factor: int = 10
 
 def operative_system_detect():
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
@@ -74,7 +54,7 @@ def operative_system_detect():
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
 
-async def download_osm_data_overpass(bbox: BoundingBox, output_path: str, websocket:WebSocket):
+async def download_osm_data_overpass(bbox: sumoClass.BoundingBox, output_path: str, websocket:WebSocket):
     """Descarga directa de Overpass API para evitar errores de osmGet.py"""
     print("Descargando datos de OSM")
     types_filter = "|".join(bbox.road_types)
@@ -109,7 +89,7 @@ async def download_osm_data_overpass(bbox: BoundingBox, output_path: str, websoc
         await websocket.close()
         raise HTTPException(status_code=500, detail=str(e))
 
-async def download_osm_data(bbox: BoundingBox, output_path: str, websocket: WebSocket):
+async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, websocket: WebSocket):
     """
     Extrae datos de un archivo .pbf local filtrando por bbox y etiquetas,
     emulando el comportamiento de la Overpass API.
@@ -178,8 +158,6 @@ async def download_osm_data(bbox: BoundingBox, output_path: str, websocket: WebS
         error_msg = f"Error procesando OSM local: {str(e)}"
         print(error_msg)
         await websocket.send_json({"mensaje": "Error en el procesamiento local 🚨: " + error_msg})
-
-
 
 def getVelocityStyle(velocity):
 
@@ -436,7 +414,6 @@ def parse_sumo_emissions_edge(file_path):
     
     return pd.DataFrame(data)
 
-
 def parse_sumo_traffic_edge(file_path):
     tree = ET.parse(file_path)
     root = tree.getroot()
@@ -463,11 +440,16 @@ def parse_sumo_traffic_edge(file_path):
     
 # funcion de guardado en BD de la simulacion, con la idea de que se ejecute al finalizar la simulacion y el parseo de los resultados de emisiones 
 # y trafico, para cargar esos datos en Postgres y poder hacer consultas SQL posteriormente
-def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
+def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, connection_params: sumoClass.connectionParams):
     # Aquí iría la lógica para cargar los datos de la simulación (vehículos, tiempos, etc.) en Postgres
     # Esto dependerá de cómo estés exportando esos datos desde SUMO (CSV, JSON, etc.)
-    print("Función simulation_to_postgres() aún no implementada.")
-    conn = psycopg2.connect("host=localhost port=5432 dbname=sumo user=admin password=admin")
+    conn = psycopg2.connect(
+        host=connection_params.host,
+        port=connection_params.port,
+        dbname=connection_params.dbname,
+        user=connection_params.user,
+        password=connection_params.password
+    )
     cur = conn.cursor()
 
     cur.execute("""CREATE TABLE IF NOT EXISTS simulations (
@@ -541,7 +523,7 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
     """)
 
 
-    df_emissions = pd.read_parquet(os.path.join(ruta_output, "edgeEmissions.parquet"))
+    df_emissions = pd.read_parquet(ruta_file_emissions)
     df_emissions.sort_values(['interval_begin'], inplace=True)
     df_emissions = df_emissions.fillna(0)
     columns=df_emissions.columns
@@ -550,7 +532,7 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
     print(len(df_emissions))
     total_rows = len(df_emissions)
 
-    df_traffic = pd.read_parquet(os.path.join(ruta_output, "edgeTraffic.parquet"))
+    df_traffic = pd.read_parquet(ruta_file_traffic)
     df_traffic.sort_values(['interval_begin'], inplace=True)
     df_traffic = df_traffic.fillna(0)
     columns_traffic = df_traffic.columns
@@ -563,16 +545,16 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
     cur.execute("INSERT INTO simulations (date) VALUES (NOW()) RETURNING id_simulation;")
     id_simulation = cur.fetchone()[0]
     try:
-        with open(simulation, 'w') as f_simulation:
+        with open(simulation, 'a') as f_simulation:
             i=1
             for d in df_emissions.index:
                 porcentaje = (i / total_rows) * 100
                 print(f"\rProgreso: {porcentaje:.2f}% ({i}/{total_rows})", end="")
-                df_row = df_emissions.loc[d]
-                f_simulation.write(f"{df_row}\n")
+                df_row_emisions = df_emissions.loc[d]
+                f_simulation.write(f"{df_row_emisions}\n")
                 query = f"""
                     INSERT INTO edge_emissions_simulation ( id_simulation, id, sampled_seconds, co_abs, co2_abs, hc_abs, pmx_abs, nox_abs, fuel_abs, electricity_abs, co_normed, co2_normed, hc_normed, pmx_normed, nox_normed, fuel_normed, electricity_normed, traveltime, co_perveh, co2_perveh, hc_perveh, pmx_perveh, nox_perveh, fuel_perveh, electricity_perveh, interval_begin, interval_end)
-                    VALUES ({id_simulation}, '{df_row["id"]}', {df_row["sampledSeconds"]}, {df_row["CO_abs"]}, {df_row["CO2_abs"]}, {df_row["HC_abs"]}, {df_row["PMx_abs"]}, {df_row["NOx_abs"]}, {df_row["fuel_abs"]}, {df_row["electricity_abs"]}, {df_row["CO_normed"]}, {df_row["CO2_normed"]}, {df_row["HC_normed"]}, {df_row["PMx_normed"]}, {df_row["NOx_normed"]}, {df_row["fuel_normed"]}, {df_row["electricity_normed"]}, {df_row["traveltime"]}, {df_row["CO_perVeh"]}, {df_row["CO2_perVeh"]}, {df_row["HC_perVeh"]}, {df_row["PMx_perVeh"]}, {df_row["NOx_perVeh"]}, {df_row["fuel_perVeh"]}, {df_row["electricity_perVeh"]}, {df_row["interval_begin"]}, {df_row["interval_end"]});
+                    VALUES ({id_simulation}, '{df_row_emisions["id"]}', {df_row_emisions["sampledSeconds"]}, {df_row_emisions["CO_abs"]}, {df_row_emisions["CO2_abs"]}, {df_row_emisions["HC_abs"]}, {df_row_emisions["PMx_abs"]}, {df_row_emisions["NOx_abs"]}, {df_row_emisions["fuel_abs"]}, {df_row_emisions["electricity_abs"]}, {df_row_emisions["CO_normed"]}, {df_row_emisions["CO2_normed"]}, {df_row_emisions["HC_normed"]}, {df_row_emisions["PMx_normed"]}, {df_row_emisions["NOx_normed"]}, {df_row_emisions["fuel_normed"]}, {df_row_emisions["electricity_normed"]}, {df_row_emisions["traveltime"]}, {df_row_emisions["CO_perVeh"]}, {df_row_emisions["CO2_perVeh"]}, {df_row_emisions["HC_perVeh"]}, {df_row_emisions["PMx_perVeh"]}, {df_row_emisions["NOx_perVeh"]}, {df_row_emisions["fuel_perVeh"]}, {df_row_emisions["electricity_perVeh"]}, {df_row_emisions["interval_begin"]}, {df_row_emisions["interval_end"]});
                 """
                 f_simulation.write(f"{query}\n")
                 cur.execute(query)
@@ -601,14 +583,13 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output):
         f_simulation.close()
         print("\n¡Carga completada!")
         print("\nDatos de la simulación cargados en Postgres.")
+
     except Exception as e:
         cur.close()
         conn.close()
+        f_simulation.write(f"{e}\n")
         f_simulation.close()
         print(f"Error al cargar datos de la simulación: {e} ")
-
-
-
 
 # ******************FIN FUNCIONES DE PARSEO DE LOS RESULTADOS DE EMISIONES DE SUMO**********************#
 # RUTA PARA EJECUTAR LA SIMULACION DE SUMO Y OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES
@@ -618,7 +599,7 @@ async def simulationEmissions(websocket: WebSocket):
     sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
     sumo_home_linux = "/usr/share/sumo"
     ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
-    ruta_output_linux = r"/tmp/output"
+    ruta_output_linux = r"/tmp/"
     ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
     ruta_linux = r"/tmp/"
 
@@ -805,6 +786,10 @@ async def simulationEmissions(websocket: WebSocket):
                 print(" Fichero de edgeTraffic.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 
+
+
+                simulation_to_postgres(os.path.join(ruta_output, "edgeEmissions.parquet"), os.path.join(ruta_output, "edgeTraffic.parquet"), ruta_output, connection_params=sumoClass.connectionParams())
+                await websocket.send_json({"mensaje": "Datos de la simulación cargados en Postgres.🗄️"})
 
             except Exception as e:
                 print(f"Error al ejecutar SUMO: {e}")
@@ -1802,3 +1787,4 @@ async def get_autobuses_geojson():
     
     except Exception as e:
         print("Error al obtener datos de autobuses de Pamplona:", str(e))
+
