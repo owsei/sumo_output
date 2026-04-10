@@ -370,6 +370,39 @@
 
             applyLayerVisibility('capa-nodos');
             habilitarClickEnCapa('capa-nodos', 'Informacion del nodo');
+
+            // Añadir interactividad al pasar el mouse sobre los nodos
+            map.on('mouseenter', 'capa-carriles', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'capa-carriles', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // Mostrar información del nodo al hacer clic
+            map.on('click', 'capa-carriles', (e) => {
+                const properties = e.features[0].properties;
+                const coordinates = e.lngLat;
+                
+                const popupContent = `
+                    <div>
+                        <strong>Carril: ${properties.id}</strong><br/>
+                        <strong>Nombre:</strong> ${properties.name || 'N/A'}<br/>
+                        <strong>Tipo:</strong> ${properties.type || 'N/A'}<br/>
+                        <strong>Velocidad Máxima:</strong> ${properties.max_speed || 'N/A'} km/h<br/>
+                        <strong>Permisos:</strong> ${properties.permisos || 'N/A'}
+                        
+                    </div>
+                `;
+                
+                new maplibregl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(popupContent)
+                    .addTo(map);
+            });
+
+
             ocultarSpinner();
 
         } catch (err) {
@@ -382,7 +415,72 @@
     
     
     cargarNodosPamplona(window.endPoint);
+    async function cargarDatosNodos(endPoint)   {
+        try {
+            const response = await fetch(endPoint + '/nodosPamplona');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            const geojsonData = await response.json();
+
+            console.log('Nodos cargados:', geojsonData);
+            
+            // Añadimos la fuente de datos de nodos al mapa
+            map.addSource('nodos-pamplona', {
+                type: 'geojson',
+                data: geojsonData
+            });
+
+            // Añadimos la capa visual para los nodos como linestrings
+            map.addLayer({
+                id: 'capa-nodos',
+                type: 'line',
+                source: 'nodos-pamplona',
+                paint: {
+                    'line-width': 3,
+                    'line-color': '#Fff000',
+                    'line-opacity': 0.9
+                }
+            });
+
+            // Añadir interactividad al pasar el mouse sobre los nodos
+            map.on('mouseenter', 'capa-nodos', () => {
+                map.getCanvas().style.cursor = 'pointer';
+            });
+
+            map.on('mouseleave', 'capa-nodos', () => {
+                map.getCanvas().style.cursor = '';
+            });
+
+            // Mostrar información del nodo al hacer clic
+            map.on('click', 'capa-nodos', (e) => {
+                const properties = e.features[0].properties;
+                const coordinates = e.lngLat;
+                
+                const popupContent = `
+                    <div>
+                        <strong>Nodo: ${properties.id}</strong><br/>
+                        <strong>Nombre:</strong> ${properties.name || 'N/A'}<br/>
+                        <strong>Tipo:</strong> ${properties.type || 'N/A'}<br/>
+                        <strong>Lat:</strong> ${properties.lat || 'N/A'}<br/>
+                        <strong>Lon:</strong> ${properties.lon || 'N/A'}
+                    </div>
+                `;
+                
+                new maplibregl.Popup()
+                    .setLngLat(coordinates)
+                    .setHTML(popupContent)
+                    .addTo(map);
+            });
+
+        } catch (err) {
+            console.error('Error fetching nodos GeoJSON:', err);
+        }
+    };
+
+    
     cargarDatosCarriles(window.endPoint);
+    cargarDatosNodos(window.endPoint);
 </script>
 
 

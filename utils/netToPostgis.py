@@ -15,8 +15,8 @@ import pyarrow.parquet as pa
 
 
 sumo_home = os.environ.get("SUMO_HOME")
-ruta= r"C:\Proyectos\twin-sumo-output\red_carreteras"
-ruta_output= r"C:\Proyectos\twin-sumo-output\output"
+ruta= r"D:\Proyectos\sumo_output\red_carreteras"
+ruta_output= r"D:\Proyectos\sumo_output\output"
 
 
 def net_to_postgres(net_file):
@@ -68,13 +68,13 @@ def net_to_postgres(net_file):
         print("Create: table carriles_pamplona")
 
 
-        cur.execute("""CREATE TABLE IF NOT EXISTS traffic_lights_pamplona (
-                tls_id TEXT PRIMARY KEY,
-                node_id TEXT REFERENCES nodos_pamplona(node_id),
-                edge_id TEXT REFERENCES calles_pamplona(id),
-                link_index INTEGER,
-                geom GEOMETRY(Point, 4326)
-            )""")
+        # cur.execute("""CREATE TABLE IF NOT EXISTS traffic_lights_pamplona (
+        #         tls_id TEXT PRIMARY KEY,
+        #         node_id TEXT REFERENCES nodos_pamplona(node_id),
+        #         edge_id TEXT REFERENCES calles_pamplona(id),
+        #         link_index INTEGER,
+        #         geom GEOMETRY(Point, 4326)
+        #     )""")
         print("Create: table traffic_lights_pamplona")
 
 
@@ -85,39 +85,39 @@ def net_to_postgres(net_file):
 
         # --- 1. CARGAR NODOS (Semáforos y Cruces) ---
         print("Cargando nodos...")
-        for node in net.getNodes():
-            lon, lat = node.getCoord()
-            lon, lat = net.convertXY2LonLat(lon, lat)
-            shape = node.getShape()
-            coordinates = []
-            for x, y in shape:
-                lon, lat = net.convertXY2LonLat(x, y)
-                coordinates.append([lon, lat])
+        # for node in net.getNodes():
+        #     lon, lat = node.getCoord()
+        #     lon, lat = net.convertXY2LonLat(lon, lat)
+        #     shape = node.getShape()
+        #     coordinates = []
+        #     for x, y in shape:
+        #         lon, lat = net.convertXY2LonLat(x, y)
+        #         coordinates.append([lon, lat])
 
-            if coordinates[0] != coordinates[-1]:
-                coordinates.append(coordinates[0])
+        #     if coordinates[0] != coordinates[-1]:
+        #         coordinates.append(coordinates[0])
 
 
-            wkt_coords = ", ".join([f"{p[0]} {p[1]}" for p in coordinates])
+        #     wkt_coords = ", ".join([f"{p[0]} {p[1]}" for p in coordinates])
 
-            if len(coordinates) == 1 :
-                wkt_linestring = f"LINESTRING({wkt_coords}, {wkt_coords})"
-            else:
-                wkt_linestring = f"LINESTRING({wkt_coords})"
+        #     if len(coordinates) == 1 :
+        #         wkt_linestring = f"LINESTRING({wkt_coords}, {wkt_coords})"
+        #     else:
+        #         wkt_linestring = f"LINESTRING({wkt_coords})"
 
-            # 5. Ejecutar la query
-            query = """
-                INSERT INTO nodos_pamplona (node_id, tipo_control, point, shape)
-                VALUES ('"""+ node.getID() +"""', 
-                        '"""+ node.getType() +"""', 
-                        ST_SetSRID(ST_Point("""+ str(lon) +""", """+ str(lat) +"""), 4326), 
-                        ST_GeomFromText('"""+ wkt_linestring +"""', 4326))
-                ON CONFLICT (node_id) DO NOTHING;
-            """ 
+        #     # 5. Ejecutar la query
+        #     query = """
+        #         INSERT INTO nodos_pamplona (node_id, tipo_control, point, shape)
+        #         VALUES ('"""+ node.getID() +"""', 
+        #                 '"""+ node.getType() +"""', 
+        #                 ST_SetSRID(ST_Point("""+ str(lon) +""", """+ str(lat) +"""), 4326), 
+        #                 ST_GeomFromText('"""+ wkt_linestring +"""', 4326))
+        #         ON CONFLICT (node_id) DO NOTHING;
+        #     """ 
 
-            print(f"{query}")
-            # Asegúrate de pasar los parámetros como una tupla al ejecutar (cursor.execute)
-            cur.execute(query)
+        #     print(f"{query}")
+        #     # Asegúrate de pasar los parámetros como una tupla al ejecutar (cursor.execute)
+        #     cur.execute(query)
 
         print("Nodos cargados.")
         # --- 2. CARGAR CALLES (Edges) ---
@@ -141,7 +141,7 @@ def net_to_postgres(net_file):
                 f_edges.write(f"{query_edge}\n")
 
                 cur.execute(query_edge)
-                # conn.commit()
+                conn.commit()
 
                 # Ahora insertamos cada carril de esta calle
                 lanes_file = os.path.join(ruta_output, "lanes.txt")
@@ -164,7 +164,7 @@ def net_to_postgres(net_file):
                         """
                         f_lanes.write(f"{query_lane}\n")
                         cur.execute(query_lane)
-                        # conn.commit()
+                        conn.commit()
 
                         # cur.execute("""
                         #     INSERT INTO carriles_pamplona (lane_id, edge_id, indice_carril, ancho, permisos, velocidad_max, geom)
@@ -175,30 +175,30 @@ def net_to_postgres(net_file):
         print("Calles y carriles cargados.")
 
 
-        trafficlights_file = os.path.join(ruta_output, "trafficlights.txt")
-        with open(trafficlights_file, 'w') as f_trafficlights:
-            for tls in net.getTrafficLights():
-                tls_id = tls.getID()
+        # trafficlights_file = os.path.join(ruta_output, "trafficlights.txt")
+        # with open(trafficlights_file, 'w') as f_trafficlights:
+        #     for tls in net.getTrafficLights():
+        #         tls_id = tls.getID()
                 
-                # El TLS nos da las conexiones (el "puente" entre calles)
-                for connection in tls.getConnections():
-                    # connection[0] es el carril de entrada (Lane)
-                    lane_entrada = connection[0]
-                    link_index = connection[2] # Su posición en el código de luces (0, 1, 2...)
+        #         # El TLS nos da las conexiones (el "puente" entre calles)
+        #         for connection in tls.getConnections():
+        #             # connection[0] es el carril de entrada (Lane)
+        #             lane_entrada = connection[0]
+        #             link_index = connection[2] # Su posición en el código de luces (0, 1, 2...)
                     
-                    # El semáforo físico está al final del carril
-                    shape = lane_entrada.getShape()
-                    punto_final = shape[-1] 
+        #             # El semáforo físico está al final del carril
+        #             shape = lane_entrada.getShape()
+        #             punto_final = shape[-1] 
                     
-                    lon, lat = net.convertXY2LonLat(punto_final[0], punto_final[1])
+        #             lon, lat = net.convertXY2LonLat(punto_final[0], punto_final[1])
                     
-                    query_tls = f"""
-                        INSERT INTO nodos_pamplona (node_id, tipo_control,geom)
-                        VALUES ('{tls_id}', 'traffic_light', ST_SetSRID(ST_Point({lon}, {lat}), 4326))
-                        ON CONFLICT (node_id) DO NOTHING;
-                    """
-                    f_trafficlights.write(f"{query_tls}\n")
-                    cur.execute(query_tls)
+        #             query_tls = f"""
+        #                 INSERT INTO nodos_pamplona (node_id, tipo_control,geom)
+        #                 VALUES ('{tls_id}', 'traffic_light', ST_SetSRID(ST_Point({lon}, {lat}), 4326))
+        #                 ON CONFLICT (node_id) DO NOTHING;
+        #             """
+        #             f_trafficlights.write(f"{query_tls}\n")
+        #             cur.execute(query_tls)
 
 
         
@@ -327,7 +327,6 @@ def simulation_to_postgres():
                 i+=1
             
             conn.commit()
-            print("")
             f_simulation.write("\n--- EDGE TRAFFIC ---\n")
             j=1
             for d in df_traffic.index:
@@ -358,7 +357,7 @@ def simulation_to_postgres():
     
 if __name__ == "__main__":
     net_file = os.path.join(ruta, "pamplona.net.xml")
-    # net_to_postgres(net_file)
-    # simulation_to_postgres()
+    net_to_postgres(net_file)
+    simulation_to_postgres()
 
 

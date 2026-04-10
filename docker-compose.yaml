@@ -7,8 +7,8 @@ services:
       dockerfile: dockerfile_sumo_fastapi
     environment:
       - SUMO_HOME=/usr/share/sumo
-    # ports:
-    #   - "8001:8000"
+    ports:
+      - "8001:8000"
     stdin_open: true
     tty: true
     labels:

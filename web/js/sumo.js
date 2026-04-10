@@ -2,7 +2,7 @@
         // const endPoint= "ws://owsei.ddns.net:8001/"
         // const endPoint= "http://localhost:8000/"
         // const endPointDirecto="ws://localhost:8000/"
-        window.endPoint= "http://localhost:8001"
+        window.endPoint= "http://localhost:8001/"
 
         // Reemplaza con tu token de Cesium Ion
        

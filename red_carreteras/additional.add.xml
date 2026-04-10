@@ -1,6 +1,6 @@
 <additional>  
-                                        <edgeData id="edgeEmissions" type="emissions" freq="60" file="C:\Proyectos\twin-sumo-output\output\edgeEmissions.xml" />
-                                        <edgeData id="edgeTraffic" freq="60" file="C:\Proyectos\twin-sumo-output\output\edgeTraffic.xml" />
+                                        <edgeData id="edgeEmissions" type="emissions" freq="60" file="D:\Proyectos\sumo_output\output\edgeEmissions.xml" />
+                                        <edgeData id="edgeTraffic" freq="60" file="D:\Proyectos\sumo_output\output\edgeTraffic.xml" />
                                         <vType id="turismo" 
                                             vClass="passenger" 
                                             accel="2.6" 
