@@ -1,3 +1,5 @@
+import time
+
 import sumolib
 # import traci
 import os
@@ -418,19 +420,20 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, co
     )
     cur = conn.cursor()
 
-    cur.execute("""CREATE TABLE IF NOT EXISTS simulations (
+    cur.execute(""" CREATE TABLE IF NOT EXISTS simulations (
                     id_simulation integer PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
                     date timestamp DEFAULT NOW(),
                     num_vehicles integer,
                     duration_sec double precision,
                     fringe_factor double precision,
                     trip_period double precision,
-                    agregation_period double precision
+                    agregation_period double precision,
+                    file_emissions text,
+                    file_traffic text
                 
                 )""")
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS edge_emissions_simulation (
+    cur.execute(""" CREATE TABLE IF NOT EXISTS edge_emissions_simulation (
             id_simulation integer,
             id text,
             sampled_seconds integer,
@@ -461,8 +464,7 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, co
         );
     """)
 
-    cur.execute("""
-        CREATE TABLE IF NOT EXISTS edge_traffic_simulation (
+    cur.execute(""" CREATE TABLE IF NOT EXISTS edge_traffic_simulation (
             id_simulation integer,
             id text,
             sampled_seconds double precision,
@@ -488,55 +490,56 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, co
         );
     """)
 
+    try:
+    # df_emissions = pd.read_parquet(ruta_file_emissions)
+    # df_emissions.sort_values(['interval_begin'], inplace=True)
+    # df_emissions = df_emissions.fillna(0)
+    # columns=df_emissions.columns
+    # print(f"Columnas del DataFrame: {columns}")
+    # print(df_emissions.head(10))
+    # print(len(df_emissions))
+    # total_rows = len(df_emissions)
 
-    df_emissions = pd.read_parquet(ruta_file_emissions)
-    df_emissions.sort_values(['interval_begin'], inplace=True)
-    df_emissions = df_emissions.fillna(0)
-    columns=df_emissions.columns
-    print(f"Columnas del DataFrame: {columns}")
-    print(df_emissions.head(10))
-    print(len(df_emissions))
-    total_rows = len(df_emissions)
-
-    df_traffic = pd.read_parquet(ruta_file_traffic)
-    df_traffic.sort_values(['interval_begin'], inplace=True)
-    df_traffic = df_traffic.fillna(0)
-    columns_traffic = df_traffic.columns
-    print(f"Columnas del DataFrame edgeTraffic: {columns_traffic}")
-    print(df_traffic.head(10))
-    print(len(df_traffic))
-    total_rows_traffic = len(df_traffic)
+    # df_traffic = pd.read_parquet(ruta_file_traffic)
+    # df_traffic.sort_values(['interval_begin'], inplace=True)
+    # df_traffic = df_traffic.fillna(0)
+    # columns_traffic = df_traffic.columns
+    # print(f"Columnas del DataFrame edgeTraffic: {columns_traffic}")
+    # print(df_traffic.head(10))
+    # print(len(df_traffic))
+    # total_rows_traffic = len(df_traffic)
 
     # simulation = os.path.join(ruta_output, "simulation.txt")
-    cur.execute(f"""INSERT INTO simulations (date, num_vehicles, duration_sec, fringe_factor, aggregation_period, trip_period) VALUES (NOW(), {simulation_params.num_vehicles}, {simulation_params.duration_sec}, {simulation_params.fringe_factor}, {simulation_params.aggregation_period_sec}, {simulation_params.trip_period}) RETURNING id_simulation;""")
-    id_simulation = cur.fetchone()[0]
-    try:
-        i=1
-        for d in df_emissions.index:
-            porcentaje = (i / total_rows) * 100
-            print(f"\rProgreso: {porcentaje:.2f}% ({i}/{total_rows})", end="")
-            df_row_emisions = df_emissions.loc[d]
-            query = f"""
-                INSERT INTO edge_emissions_simulation ( id_simulation, id, sampled_seconds, co_abs, co2_abs, hc_abs, pmx_abs, nox_abs, fuel_abs, electricity_abs, co_normed, co2_normed, hc_normed, pmx_normed, nox_normed, fuel_normed, electricity_normed, traveltime, co_perveh, co2_perveh, hc_perveh, pmx_perveh, nox_perveh, fuel_perveh, electricity_perveh, interval_begin, interval_end)
-                VALUES ({id_simulation}, '{df_row_emisions["id"]}', {df_row_emisions["sampledSeconds"]}, {df_row_emisions["CO_abs"]}, {df_row_emisions["CO2_abs"]}, {df_row_emisions["HC_abs"]}, {df_row_emisions["PMx_abs"]}, {df_row_emisions["NOx_abs"]}, {df_row_emisions["fuel_abs"]}, {df_row_emisions["electricity_abs"]}, {df_row_emisions["CO_normed"]}, {df_row_emisions["CO2_normed"]}, {df_row_emisions["HC_normed"]}, {df_row_emisions["PMx_normed"]}, {df_row_emisions["NOx_normed"]}, {df_row_emisions["fuel_normed"]}, {df_row_emisions["electricity_normed"]}, {df_row_emisions["traveltime"]}, {df_row_emisions["CO_perVeh"]}, {df_row_emisions["CO2_perVeh"]}, {df_row_emisions["HC_perVeh"]}, {df_row_emisions["PMx_perVeh"]}, {df_row_emisions["NOx_perVeh"]}, {df_row_emisions["fuel_perVeh"]}, {df_row_emisions["electricity_perVeh"]}, {df_row_emisions["interval_begin"]}, {df_row_emisions["interval_end"]});
-            """
-            cur.execute(query)
-            i+=1
+        cur.execute(f"""INSERT INTO simulations (date, num_vehicles, duration_sec, fringe_factor, aggregation_period, trip_period,file_emissions,file_traffic) VALUES (NOW(), {simulation_params.num_vehicles}, {simulation_params.duration_sec}, {simulation_params.fringe_factor}, {simulation_params.aggregation_period_sec}, {simulation_params.trip_period}, '{ruta_file_emissions}', '{ruta_file_traffic}') RETURNING id_simulation;""")
+        id_simulation = cur.fetchone()[0]
+        conn.commit()
+    # try:
+    #     i=1
+    #     for d in df_emissions.index:
+    #         porcentaje = (i / total_rows) * 100
+    #         print(f"\rProgreso: {porcentaje:.2f}% ({i}/{total_rows})", end="")
+    #         df_row_emisions = df_emissions.loc[d]
+    #         query = f"""
+    #             INSERT INTO edge_emissions_simulation ( id_simulation, id, sampled_seconds, co_abs, co2_abs, hc_abs, pmx_abs, nox_abs, fuel_abs, electricity_abs, co_normed, co2_normed, hc_normed, pmx_normed, nox_normed, fuel_normed, electricity_normed, traveltime, co_perveh, co2_perveh, hc_perveh, pmx_perveh, nox_perveh, fuel_perveh, electricity_perveh, interval_begin, interval_end)
+    #             VALUES ({id_simulation}, '{df_row_emisions["id"]}', {df_row_emisions["sampledSeconds"]}, {df_row_emisions["CO_abs"]}, {df_row_emisions["CO2_abs"]}, {df_row_emisions["HC_abs"]}, {df_row_emisions["PMx_abs"]}, {df_row_emisions["NOx_abs"]}, {df_row_emisions["fuel_abs"]}, {df_row_emisions["electricity_abs"]}, {df_row_emisions["CO_normed"]}, {df_row_emisions["CO2_normed"]}, {df_row_emisions["HC_normed"]}, {df_row_emisions["PMx_normed"]}, {df_row_emisions["NOx_normed"]}, {df_row_emisions["fuel_normed"]}, {df_row_emisions["electricity_normed"]}, {df_row_emisions["traveltime"]}, {df_row_emisions["CO_perVeh"]}, {df_row_emisions["CO2_perVeh"]}, {df_row_emisions["HC_perVeh"]}, {df_row_emisions["PMx_perVeh"]}, {df_row_emisions["NOx_perVeh"]}, {df_row_emisions["fuel_perVeh"]}, {df_row_emisions["electricity_perVeh"]}, {df_row_emisions["interval_begin"]}, {df_row_emisions["interval_end"]});
+    #         """
+    #         cur.execute(query)
+    #         i+=1
         
-        conn.commit()
-        print("")
-        j=1
-        for d in df_traffic.index:
-            porcentaje = (j / total_rows_traffic) * 100
-            print(f"\rProgreso edgeTraffic: {porcentaje:.2f}% ({j}/{total_rows_traffic})", end="")
-            df_row = df_traffic.loc[d]
-            query = f"""
-                INSERT INTO edge_traffic_simulation (id_simulation, id, sampled_seconds, traveltime, overlap_traveltime, density, overlap_density, lane_density, occupancy, waiting_time, time_loss, speed, speed_relative, departed, arrived, entered, "left", lane_changed_from, lane_changed_to, flow, interval_begin, interval_end)
-                VALUES ({id_simulation}, '{df_row["id"]}', {df_row["sampledSeconds"]}, {df_row["traveltime"]}, {df_row["overlapTraveltime"]}, {df_row["density"]}, {df_row["overlapDensity"]}, {df_row["laneDensity"]}, {df_row["occupancy"]}, {df_row["waitingTime"]}, {df_row["timeLoss"]}, {df_row["speed"]}, {df_row["speedRelative"]}, {df_row["departed"]}, {df_row["arrived"]}, {df_row["entered"]}, {df_row["left"]}, {df_row["laneChangedFrom"]}, {df_row["laneChangedTo"]}, {df_row["flow"]}, {df_row["interval_begin"]}, {df_row["interval_end"]});
-            """
-            cur.execute(query)
-            j += 1
-        conn.commit()
+    #     conn.commit()
+    #     print("")
+    #     j=1
+    #     for d in df_traffic.index:
+    #         porcentaje = (j / total_rows_traffic) * 100
+    #         print(f"\rProgreso edgeTraffic: {porcentaje:.2f}% ({j}/{total_rows_traffic})", end="")
+    #         df_row = df_traffic.loc[d]
+    #         query = f"""
+    #             INSERT INTO edge_traffic_simulation (id_simulation, id, sampled_seconds, traveltime, overlap_traveltime, density, overlap_density, lane_density, occupancy, waiting_time, time_loss, speed, speed_relative, departed, arrived, entered, "left", lane_changed_from, lane_changed_to, flow, interval_begin, interval_end)
+    #             VALUES ({id_simulation}, '{df_row["id"]}', {df_row["sampledSeconds"]}, {df_row["traveltime"]}, {df_row["overlapTraveltime"]}, {df_row["density"]}, {df_row["overlapDensity"]}, {df_row["laneDensity"]}, {df_row["occupancy"]}, {df_row["waitingTime"]}, {df_row["timeLoss"]}, {df_row["speed"]}, {df_row["speedRelative"]}, {df_row["departed"]}, {df_row["arrived"]}, {df_row["entered"]}, {df_row["left"]}, {df_row["laneChangedFrom"]}, {df_row["laneChangedTo"]}, {df_row["flow"]}, {df_row["interval_begin"]}, {df_row["interval_end"]});
+    #         """
+    #         cur.execute(query)
+    #         j += 1
+    #     conn.commit()
 
         cur.close() 
         conn.close()
@@ -559,6 +562,8 @@ async def simulationEmissions(websocket: WebSocket):
     ruta_output_linux = r"/tmp/output/"
     ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
     ruta_linux = r"/tmp/"
+
+    uuid_simulation = str(uuid.uuid4())[:8]
 
     num_vehicles = websocket.query_params.get("num_vehicles")
     if num_vehicles is None:
@@ -602,12 +607,12 @@ async def simulationEmissions(websocket: WebSocket):
             if operativeSytemIsLinux==1:
                 net_file = os.path.join(ruta_linux, "pamplona.net.xml")
                 print("Archivo NET creado correctamente", net_file)
-                route_file= os.path.join(ruta_linux, "mapa.rou.xml")
+                route_file= os.path.join(tmpdir, f"mapa_{uuid_simulation}.rou.xml")
                 print("Archivo ROUT creado correctamente", route_file)
             else:
                 net_file = os.path.join(ruta_windows, "pamplona.net.xml")
                 print("Archivo NET creado correctamente", net_file)
-                route_file= os.path.join(ruta_windows, "mapa.rou.xml")
+                route_file= os.path.join(tmpdir, f"mapa_{uuid_simulation}.rou.xml")
                 print("Archivo ROUT creado correctamente", route_file)
 
 
@@ -633,8 +638,8 @@ async def simulationEmissions(websocket: WebSocket):
 
 
             additional_file_content = f"""<additional>  
-                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, "edgeEmissions.xml")}" />
-                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, "edgeTraffic.xml")}" />
+                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" />
+                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")}" />
                                         <vType id="turismo" 
                                             vClass="passenger" 
                                             accel="2.6" 
@@ -681,11 +686,11 @@ async def simulationEmissions(websocket: WebSocket):
 
             # crea el archivo de configuración SUMO
             if operativeSytemIsLinux==1:
-                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
+                config_file = os.path.join(ruta_linux, f"simulation_{uuid_simulation}.sumocfg")
             else:
-                config_file = os.path.join(ruta_windows, "simulation.sumocfg")
-                route_file = os.path.join(ruta_windows, "mapa.rou.xml")
-            
+                config_file = os.path.join(ruta_windows, f"simulation_{uuid_simulation}.sumocfg")
+                route_file = os.path.join(ruta_windows, f"mapa_{uuid_simulation}.rou.xml")
+
             print("Archivo de configuración SUMO creado correctamente", config_file)
             with open(config_file, 'w') as f:
                 f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -709,6 +714,8 @@ async def simulationEmissions(websocket: WebSocket):
                 sumo = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
                 
             print("Lanzando simulación con SUMO")
+            initial_time = time.time()
+
             await websocket.send_json({"mensaje": "Lanzando simulación con SUMO de Pamplona.🚀"})
             try:
                 subprocess.run([
@@ -723,29 +730,42 @@ async def simulationEmissions(websocket: WebSocket):
 
                 await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                ruta_edgeEmissions_p = os.path.join(ruta_output, "edgeEmissions.parquet")
+                ruta_edgeEmissions_p = os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet")
                 if os.path.exists(ruta_edgeEmissions_p):
                     print("Delete existing parquet file")
                     os.remove(ruta_edgeEmissions_p)
 
-                await convertirEmissionsXmlToParquet(websocket,os.path.join(ruta_output, "edgeEmissions.xml"),os.path.join(ruta_output, "edgeEmissions.parquet"))
-                await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones de Sancho el Fuerte.🗄️"})   
-
-
+                await convertirEmissionsXmlToParquet(websocket,os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet"))
+                await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones.🗄️"})   
+                
+                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+                if os.path.exists(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")):
+                    print("Delete existing parquet file")
+                    os.remove(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"))
 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                ruta_traffic_p = os.path.join(ruta_output, "edgeTraffic.parquet")
+                ruta_traffic_p = os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet")
                 if os.path.exists(ruta_traffic_p):
                     print("Delete existing parquet file")
                     os.remove(ruta_traffic_p)
 
-                await convertirTrafficXmlToParquet(websocket, os.path.join(ruta_output, "edgeTraffic.xml"),os.path.join(ruta_output, "edgeTraffic.parquet"))
+                await convertirTrafficXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
+                
+                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+                if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
+                    print("Delete existing parquet file")
+                    os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
 
                 print(" Fichero de edgeTraffic.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 
-                simulation_to_postgres(os.path.join(ruta_output, "edgeEmissions.parquet"), os.path.join(ruta_output, "edgeTraffic.parquet"), ruta_output, sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin"),simulation_params)
+                simulation_to_postgres(f"edgeEmissions_{uuid_simulation}.parquet", f"edgeTraffic_{uuid_simulation}.parquet", ruta_output, sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin"),simulation_params)
                 await websocket.send_json({"mensaje": "Datos de la simulación cargados en Postgres.🗄️"})
+
+                final_time = time.time()
+                elapsed_time = final_time - initial_time
+                print(f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos")
+                await websocket.send_json({"mensaje": f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos"})
 
             except Exception as e:
                 print(f"Error al ejecutar SUMO: {e}")
@@ -961,12 +981,82 @@ def get_emission_data():
         "features": features
     }
 
+@app.get("/get-emission-data/{file_name}")
+def get_emission_data_by_file(file_name: str):
+    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
+    ruta_output_linux = r"/tmp/output"
+    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
+    ruta_linux = r"/tmp/"
+
+    operativeSytemIsLinux = 1 if platform.system() == "Linux" else 0
+    if operativeSytemIsLinux == 1:
+        ruta_output = ruta_output_linux
+        net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+    else:
+        ruta_output = ruta_output_windows
+        net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    # 1. Leer el parquet especificado
+    parquet_path = os.path.join(ruta_output, file_name)
+    if not os.path.exists(parquet_path):
+        raise HTTPException(status_code=404, detail=f"Archivo {file_name} no encontrado")
+    df = pd.read_parquet(parquet_path)
+    df.sort_values(['interval_begin'], inplace=True)
+
+    pollutants = ['CO_abs', 'CO2_abs', 'HC_abs', 'PMx_abs', 'NOx_abs', 'fuel_abs']
+
+    # Pivot for each pollutant
+    pivots = {}
+    for pollutant in pollutants:
+        df_pivot = df.pivot(index='id', columns='interval_begin', values=pollutant)
+        df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+        pivots[pollutant] = df_pivot
+
+    # 4. Crear el JSON final con geometría y datos de tráfico
+    features = []
+
+    for edge_id in df['id'].unique():
+        edge = net.getEdge(edge_id)
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge_id,
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6,  # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+
+        for pollutant in pollutants:
+            if edge_id in pivots[pollutant].index:
+                row = pivots[pollutant].loc[edge_id]
+                properties[f"{pollutant}_por_tiempo"] = row.dropna().to_dict()
+            else:
+                properties[f"{pollutant}_por_tiempo"] = {}
+
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": properties
+        }
+        features.append(feature)
+
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
 @app.get("/get-traffic-data")
 def get_traffic_data():
 
-    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
+    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
     ruta_output_linux = r"/tmp/"
-    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
+    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
     ruta_linux = r"/tmp/"
 
 
@@ -1377,6 +1467,7 @@ async def websocket_simulation(websocket: WebSocket):
                             "color": getTrafficLightColor(state[0]),
                             # "programs": programs
                         }
+
                         await websocket.send_json({"trafficlight":tfl})
 
                     await asyncio.sleep(0.01)
@@ -1610,6 +1701,8 @@ async def get_roads_websocket(websocket: WebSocket):
                         }
                     }
                     await websocket.send_json(feature)
+
+
             await websocket.send_json({"mensaje": "Descarga de semáforos finalizada correctamente👍 Nº:" + str(len(semaforos_detallados))})
             await websocket.close()
         except Exception as e:
@@ -1743,4 +1836,146 @@ async def get_autobuses_geojson():
     
     except Exception as e:
         print("Error al obtener datos de autobuses de Pamplona:", str(e))
+
+
+@app.get("/simulations")
+async def get_simulations():
+    
+    query = """
+        SELECT id_simulation, "date", num_vehicles, duration_sec, fringe_factor, trip_period, aggregation_period, file_emissions, file_traffic
+        FROM public.simulations;
+    """
+    try:
+        connection=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
+        conn = psycopg2.connect(
+            host=connection.host,
+            port=connection.port,
+            dbname=connection.dbname,
+            user=connection.user,
+            password=connection.password
+        )
+        cur = conn.cursor()
+        cur.execute(query)
+        rows = cur.fetchall()
+        # Get column names
+        columns = [desc[0] for desc in cur.description]
+        # Convert to list of dicts
+        result = [dict(zip(columns, row)) for row in rows]
+        cur.close()
+        conn.close()
+        return result
+    except Exception as e:
+        print("Error al obtener datos de simulaciones:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/simulations/{id_simulation}")
+async def get_simulation(id_simulation: str):
+    query = """
+        SELECT id_simulation, "date", num_vehicles, duration_sec, fringe_factor, trip_period, aggregation_period, file_emissions, file_traffic
+        FROM public.simulations
+        WHERE id_simulation = %s;
+    """
+    try:
+        connection=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
+        conn = psycopg2.connect(
+            host=connection.host,
+            port=connection.port,
+            dbname=connection.dbname,
+            user=connection.user,
+            password=connection.password
+        )
+        cur = conn.cursor()
+        cur.execute(query, (id_simulation,))
+        row = cur.fetchone()
+        if row is None:
+            raise HTTPException(status_code=404, detail="Simulación no encontrada")
+        # Get column names
+        columns = [desc[0] for desc in cur.description]
+        # Convert to dict
+        result = dict(zip(columns, row))
+        cur.close()
+        conn.close()
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        print("Error al obtener datos de la simulación:", str(e))
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# *****************
+
+@app.get("/get-emission-data/{file_name}")
+def get_emission_data_by_file(file_name: str):
+    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
+    ruta_output_linux = r"/tmp/output"
+    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
+    ruta_linux = r"/tmp/"
+
+    operativeSytemIsLinux = 1 if platform.system() == "Linux" else 0
+    if operativeSytemIsLinux == 1:
+        ruta_output = ruta_output_linux
+        net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+    else:
+        ruta_output = ruta_output_windows
+        net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    # 1. Leer el parquet especificado
+    parquet_path = os.path.join(ruta_output, file_name)
+    if not os.path.exists(parquet_path):
+        raise HTTPException(status_code=404, detail=f"Archivo {file_name} no encontrado")
+    df = pd.read_parquet(parquet_path)
+    df.sort_values(['interval_begin'], inplace=True)
+
+    pollutants = ['CO_abs', 'CO2_abs', 'HC_abs', 'PMx_abs', 'NOx_abs', 'fuel_abs']
+
+    # Pivot for each pollutant
+    pivots = {}
+    for pollutant in pollutants:
+        df_pivot = df.pivot(index='id', columns='interval_begin', values=pollutant)
+        df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+        pivots[pollutant] = df_pivot
+
+    # 4. Crear el JSON final con geometría y datos de tráfico
+    features = []
+
+    for edge_id in df['id'].unique():
+        edge = net.getEdge(edge_id)
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge_id,
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6,  # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+
+        for pollutant in pollutants:
+            if edge_id in pivots[pollutant].index:
+                row = pivots[pollutant].loc[edge_id]
+                properties[f"{pollutant}_por_tiempo"] = row.dropna().to_dict()
+            else:
+                properties[f"{pollutant}_por_tiempo"] = {}
+
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": properties
+        }
+        features.append(feature)
+
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+    
+
+
 

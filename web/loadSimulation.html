@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Cargar Simulación de Emisiones</title>
+    <meta property="og:description" content="Seleccionar y cargar simulaciones de emisiones en mapa." />
+    <meta charset='utf-8'>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.js'></script>
+     <!--BOOTSTRAP-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body { margin: 0; padding: 0; }
+        #simulations-table { height: 30%; overflow-y: auto; }
+        #map { height: 70%; }
+        .selected-row { background-color: #d1ecf1; }
+    </style>
+    <link rel="stylesheet" href="styles/styles.css">
+</head>
+<body>
+<div>
+    <div id="navbar-container"></div>
+</div>
+
+<div id="simulations-table" class="container-fluid p-3">
+    <h4>Seleccionar Simulación</h4>
+    <table class="table table-striped table-hover">
+        <thead>
+            <tr>
+                <th>ID Simulación</th>
+                <th>Fecha</th>
+                <th>Número de Vehículos</th>
+                <th>Duración (seg)</th>
+                <th>Archivo Emisiones</th>
+            </tr>
+        </thead>
+        <tbody id="simulations-tbody">
+            <!-- Filas se cargarán aquí -->
+        </tbody>
+    </table>
+</div>
+
+<div id="simulation-clock" style="display: none;">
+    <div>
+        <label class="clock-label" for="pollutant-select">Seleccionar Contaminante:</label>
+        <select class="clock-label" id="pollutant-select">
+            <option value="CO_abs">CO</option>
+            <option value="CO2_abs">CO2</option>
+            <option value="HC_abs">HC</option>
+            <option value="PMx_abs">PMx</option>
+            <option value="NOx_abs" selected>NOx</option>
+            <option value="fuel_abs">Fuel</option>
+        </select>
+    </div>
+    <div class="clock-label">Tiempo de Simulación</div>
+    <div id="time-display">00:00:00</div>
+    <div class="progress-container">
+        <div id="progress-bar"></div>
+    </div>
+    <div class="d-flex gap-2 align-items-center mt-2">
+        <button id="backward-btn" type="button" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-skip-backward-fill"></i>
+        </button>
+        <button id="play-pause-btn" type="button" class="btn btn-primary btn-sm">Pausa</button>
+        <button id="forward-btn" type="button" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-skip-forward-fill"></i>
+        </button>
+    </div>
+    <div class="mt-2">
+        <input id="time-slider" type="range" min="0" max="7200" step="10" value="0" class="form-range">
+    </div>
+</div>
+
+<div id="spinnerOverlay" class="spinner-overlay" style="display: none;">
+    <div class="spinner"></div> <b class="text_loading">Loading...</b>
+</div>
+
+
+
+<script src="./js/sumo.js"></script>
+<div id="map"></div>
+
+<script>
+
+     fetch('./js/navbar.html')
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+    });
+
+
+    // Configurar endpoint
+    window.endPoint = 'http://localhost:8001';
+
+    fetch('./js/navbar.html')
+    .then(response => response.text())
+    .then(data => {
+        document.getElementById('navbar-container').innerHTML = data;
+    });
+
+    let isPaused = false;
+    const btn = document.getElementById('play-pause-btn');
+    const backwardBtn = document.getElementById('backward-btn');
+    const forwardBtn = document.getElementById('forward-btn');
+    const timeSlider = document.getElementById('time-slider');
+    const timeDisplay = document.getElementById('time-display');
+    const progressBar = document.getElementById('progress-bar');
+    let selectedPollutant = 'NOx_abs'; // Default
+    let time = 0; // Global time
+    const maxSimulationTime = 7200;
+    const timeStep = 10;
+    let selectedSimulation = null;
+
+    // Cargar simulaciones
+    async function loadSimulations() {
+        try {
+            const response = await fetch(`${window.endPoint}/simulations`);
+            const simulations = await response.json();
+            const tbody = document.getElementById('simulations-tbody');
+            tbody.innerHTML = '';
+            simulations.forEach(sim => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${sim.id_simulation}</td>
+                    <td>${sim.date}</td>
+                    <td>${sim.num_vehicles}</td>
+                    <td>${sim.duration_sec}</td>
+                    <td>${sim.file_emissions}</td>
+                `;
+                row.addEventListener('click', () => selectSimulation(sim, row));
+                tbody.appendChild(row);
+            });
+        } catch (error) {
+            console.error('Error cargando simulaciones:', error);
+        }
+    }
+
+    function selectSimulation(sim, row) {
+        // Remover selección previa
+        document.querySelectorAll('#simulations-tbody tr').forEach(r => r.classList.remove('selected-row'));
+        row.classList.add('selected-row');
+        selectedSimulation = sim;
+        loadEmissions(sim.file_emissions);
+    }
+
+    async function loadEmissions(fileName) {
+        mostrarSpinner();
+        try {
+            const response = await fetch(`${window.endPoint}/get-emission-data/${fileName}`);
+            const geojsonData = await response.json();
+            console.log(geojsonData);
+            ocultarSpinner();
+            isPaused = true;
+            btn.innerText = 'Reanudar';
+            document.getElementById('simulation-clock').style.display = 'block';
+
+            // Si ya hay source, actualizar data
+            if (map.getSource('sumo-source')) {
+                map.getSource('sumo-source').setData(geojsonData);
+            } else {
+                
+                map.addSource('sumo-source', {
+                    type: 'geojson',
+                    data: geojsonData // Pasamos los datos recibidos de la API
+                });
+
+                map.addLayer({
+                    id: 'capa-emissions',
+                    type: 'line',
+                    source: 'sumo-source',
+                    paint: {
+                        'line-width': 3,
+                        'line-color': [
+                            'interpolate',
+                            ['linear'],
+                            ['coalesce', ['get', '0', ['get', `${selectedPollutant}_por_tiempo`]], 0], // Empezamos en el segundo 0
+                            0, '#F3F4F6', // De 0 a 9.9
+                            10, '#34D399', // De 10 a 19.9
+                            20, '#FACC15', // De 20 a 29.9
+                            30, '#FB923C', // De 30 a 39.9
+                            40, '#F87171', // De 40 a 49.9
+                            50, '#991B1B'  // 50 o más
+                        ]
+                    }
+                });
+
+                
+            }
+        } catch (error) {
+            console.error('Error cargando emisiones:', error);
+            ocultarSpinner();
+        }
+    }
+
+    // Evento Click para el botón
+    btn.addEventListener('click', () => {
+        isPaused = !isPaused;
+        btn.innerText = isPaused ? 'Reanudar' : 'Pausa';
+        btn.classList.toggle('paused', isPaused);
+    });
+
+    function renderTimeUI() {
+        timeDisplay.innerText = formatTime(time);
+        const percentage = (time / maxSimulationTime) * 100;
+        progressBar.style.width = `${percentage}%`;
+        timeSlider.value = time.toString();
+    }
+
+    function setTime(newTime) {
+        const bounded = Math.max(0, Math.min(maxSimulationTime, newTime));
+        time = Math.round(bounded / timeStep) * timeStep;
+        renderTimeUI();
+        updateLayer();
+    }
+
+    backwardBtn.addEventListener('click', () => {
+        setTime(time - timeStep);
+    });
+
+    forwardBtn.addEventListener('click', () => {
+        setTime(time + timeStep);
+    });
+
+    timeSlider.addEventListener('input', (e) => {
+        setTime(Number(e.target.value));
+    });
+
+    // Evento para el select de contaminantes
+    document.getElementById('pollutant-select').addEventListener('change', (e) => {
+        selectedPollutant = e.target.value;
+        updateLayer();
+    });
+
+    const map = (window.map = new maplibregl.Map({
+        container: 'map',
+        style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+        center: [-1.652673, 42.805925],
+        zoom: 15
+    }));
+
+    function updateLayer() {
+        if (!map.getLayer('capa-emissions')) return;
+        const timeKey = time.toString();
+        map.setPaintProperty('capa-emissions', 'line-color', [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', timeKey, ['get', `${selectedPollutant}_por_tiempo`]], 0],
+            0, '#F3F4F6',
+            10, '#34D399',
+            20, '#FACC15',
+            30, '#FB923C',
+            40, '#F87171',
+            50, '#991B1B'
+        ]);
+    }
+
+    map.on('load', () => {
+        // Cargar simulaciones al cargar el mapa
+        loadSimulations();
+
+        // Lógica de animación
+        setInterval(() => {
+            if (isPaused) return;
+            setTime((time + timeStep) % maxSimulationTime);
+        }, 500);
+    });
+
+    function formatTime(seconds) {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+    }
+
+    function mostrarSpinner() {
+        document.getElementById('spinnerOverlay').style.display = 'flex';
+    }
+
+    function ocultarSpinner() {
+        document.getElementById('spinnerOverlay').style.display = 'none';
+    }
+</script>
+
+</body>
+</html>
