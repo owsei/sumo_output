@@ -371,6 +371,7 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.2);
     min-width: 150px;
     border: 1px solid #ddd;
+    height: 375px;
 }
 
 .clock-label {
@@ -447,7 +448,7 @@
 
 #legend {
     position: absolute;
-    bottom: 30px;
+    bottom: 0px;
     right: 20px;
     background: rgba(255, 255, 255, 0.9);
     padding: 12px;
@@ -455,7 +456,7 @@
     box-shadow: 0 2px 10px rgba(0,0,0,0.1);
     font-family: sans-serif;
     font-size: 12px;
-    min-width: 120px;
+    min-width: 200px;
     border: 1px solid #ddd;
 }
 .legend-title {
@@ -480,14 +481,14 @@
 .legend {
     background-color: rgba(255, 255, 255, 0.9);
     border-radius: 8px;
-    bottom: 40px;
+    bottom: 0px;
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     padding: 15px;
     position: absolute;
     right: 20px;
     z-index: 1000;
-    min-width: 150px;
+    min-width: 200px;
 
 .legend h4 { margin: 0 0 10px 0; font-size: 14px; }
 

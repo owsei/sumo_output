@@ -1011,6 +1011,66 @@ def get_traffic_data():
         "features": features
     }
 
+@app.get("/get-traffic-data/{file_name}")
+def get_traffic_data_by_file(file_name: str):
+    operativeSytemIsLinux = 1 if platform.system() == "Linux" else 0
+    if operativeSytemIsLinux == 1:
+        ruta_output = ruta_output_linux
+        net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+    else:
+        ruta_output = ruta_output_windows
+        net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    parquet_path = os.path.join(ruta_output, file_name)
+    if not os.path.exists(parquet_path):
+        raise HTTPException(status_code=404, detail=f"Archivo {file_name} no encontrado")
+
+    df = pd.read_parquet(parquet_path)
+    df.sort_values(['interval_begin'], inplace=True)
+
+    metrics = ['density', 'occupancy', 'speed', 'flow', 'waiting_time']
+
+    pivots = {}
+    for metric in metrics:
+        if metric in df.columns:
+            df_pivot = df.pivot(index='id', columns='interval_begin', values=metric)
+            df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
+            pivots[metric] = df_pivot
+
+    features = []
+    for edge_id in df['id'].unique():
+        try:
+            edge = net.getEdge(edge_id)
+        except Exception:
+            continue
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge_id,
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6,
+            "carriles": edge.getLaneNumber(),
+        }
+
+        for metric in metrics:
+            if metric in pivots and edge_id in pivots[metric].index:
+                row = pivots[metric].loc[edge_id]
+                properties[f"{metric}_por_tiempo"] = row.dropna().to_dict()
+            else:
+                properties[f"{metric}_por_tiempo"] = {}
+
+        features.append({
+            "type": "Feature",
+            "geometry": {"type": "LineString", "coordinates": coords},
+            "properties": properties
+        })
+
+    return {"type": "FeatureCollection", "features": features}
+
+
 @app.websocket("/ws/simulationTraci")
 async def websocket_simulation(websocket: WebSocket):
     await websocket.accept()
