@@ -14,9 +14,31 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { margin: 0; padding: 0; }
-        #simulations-table { height: 30%; overflow-y: auto; }
-        #map { height: 70%; }
+        #map { height: 95%; }
         .selected-row { background-color: #d1ecf1; }
+        .sim-toolbar {
+            position: absolute;
+            top: 80px;
+            left: 16px;
+            z-index: 20;
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .sim-toolbar .current-sim {
+            background: rgba(255, 255, 255, 0.92);
+            border: 1px solid #dee2e6;
+            border-radius: 0.4rem;
+            padding: 0.35rem 0.6rem;
+            font-size: 0.85rem;
+            max-width: 360px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .offcanvas tbody tr {
+            cursor: pointer;
+        }
     </style>
     <link rel="stylesheet" href="styles/styles.css">
 </head>
@@ -25,23 +47,42 @@
     <div id="navbar-container"></div>
 </div>
 
-<div id="simulations-table" class="container-fluid p-3">
-    <h4>Seleccionar Simulación de Tráfico</h4>
-    <table class="table table-striped table-hover">
-        <thead>
-            <tr>
-                <th>ID Simulación</th>
-                <th>Fecha</th>
-                <th>Número de Vehículos</th>
-                <th>Periodo de Agregación</th>
-                <th>Duración (seg)</th>
-                <th>Archivo Tráfico</th>
-            </tr>
-        </thead>
-        <tbody id="simulations-tbody">
-            <!-- Filas se cargarán aquí -->
-        </tbody>
-    </table>
+<div class="sim-toolbar">
+    <button class="btn btn-dark btn-sm" type="button" data-bs-toggle="offcanvas" data-bs-target="#simulationsOffcanvas" aria-controls="simulationsOffcanvas">
+        <i class="bi bi-list-ul me-1"></i>Simulaciones
+    </button>
+    <div id="selected-simulation-label" class="current-sim">Ninguna simulación cargada</div>
+</div>
+
+<div class="offcanvas offcanvas-start" tabindex="-1" id="simulationsOffcanvas" aria-labelledby="simulationsOffcanvasLabel">
+    <div class="offcanvas-header">
+        <h5 class="offcanvas-title" id="simulationsOffcanvasLabel">Cargar simulación de tráfico</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <div class="p-3 border-bottom d-flex justify-content-between align-items-center">
+            <small class="text-muted">Selecciona una fila para cargarla</small>
+            <button id="refreshSimulationsBtn" class="btn btn-outline-secondary btn-sm" type="button">
+                <i class="bi bi-arrow-clockwise"></i>
+            </button>
+        </div>
+        <div class="table-responsive" style="max-height: calc(100vh - 140px);">
+            <table class="table table-striped table-hover table-sm mb-0">
+                <thead class="table-light sticky-top">
+                    <tr>
+                        <th>ID</th>
+                        <th>Fecha</th>
+                        <th>Vehículos</th>
+                        <th>Agregación</th>
+                        <th>Duración</th>
+                    </tr>
+                </thead>
+                <tbody id="simulations-tbody">
+                    <!-- Filas se cargarán aquí -->
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 
 <div id="simulation-clock" style="display: none;">
@@ -119,6 +160,11 @@
     window.maxSimulationTime = 3600;
     window.timeStep = 10;
     let selectedSimulation = null;
+    const selectedSimulationLabel = document.getElementById('selected-simulation-label');
+    const simulationsOffcanvasEl = document.getElementById('simulationsOffcanvas');
+    const simulationsOffcanvas = new bootstrap.Offcanvas(simulationsOffcanvasEl);
+
+    document.getElementById('refreshSimulationsBtn').addEventListener('click', loadSimulations);
 
     // Escalas de color por métrica
     const metricScales = {
@@ -180,6 +226,14 @@
             const simulations = await response.json();
             const tbody = document.getElementById('simulations-tbody');
             tbody.innerHTML = '';
+
+            if (!simulations.length) {
+                const emptyRow = document.createElement('tr');
+                emptyRow.innerHTML = '<td colspan="5" class="text-center text-muted py-3">No hay simulaciones</td>';
+                tbody.appendChild(emptyRow);
+                return;
+            }
+
             simulations.forEach(sim => {
                 const row = document.createElement('tr');
                 const date = sim.date ? new Date(sim.date).toLocaleString('es-ES') : '-';
@@ -203,6 +257,8 @@
         document.querySelectorAll('#simulations-tbody tr').forEach(r => r.classList.remove('selected-row'));
         row.classList.add('selected-row');
         selectedSimulation = sim;
+        selectedSimulationLabel.textContent = `Simulación #${sim.id_simulation} | ${sim.num_vehicles} vehículos | ${sim.duration_sec}s`;
+        simulationsOffcanvas.hide();
         loadTraffic(sim);
     }
 
