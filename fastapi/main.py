@@ -33,6 +33,12 @@ import clases.sumoClass as sumoClass
 
 url_overpass = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 
+sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+sumo_home_linux = "/usr/share/sumo"
+ruta_output_windows = r"C:\Proyectos\sumo_output_mia\output"
+ruta_output_linux = r"/tmp/output/"
+ruta_windows = r"C:\Proyectos\sumo_output_mia\red_carreteras"
+ruta_linux = r"/tmp/"
 
 app = FastAPI()
 
@@ -427,10 +433,9 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, co
                     duration_sec double precision,
                     fringe_factor double precision,
                     trip_period double precision,
-                    agregation_period double precision,
+                    aggregation_period double precision,
                     file_emissions text,
                     file_traffic text
-                
                 )""")
 
     cur.execute(""" CREATE TABLE IF NOT EXISTS edge_emissions_simulation (
@@ -556,13 +561,6 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, co
 @app.websocket("/ws/simulationEmissions")
 async def simulationEmissions(websocket: WebSocket):
     await websocket.accept()
-    sumo_home_windows = r"D:\Proyectos\01_SUMO"
-    sumo_home_linux = "/usr/share/sumo"
-    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
-    ruta_output_linux = r"/tmp/output/"
-    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
-    ruta_linux = r"/tmp/"
-
     uuid_simulation = str(uuid.uuid4())[:8]
 
     num_vehicles = websocket.query_params.get("num_vehicles")
@@ -636,10 +634,10 @@ async def simulationEmissions(websocket: WebSocket):
                     "--fringe-factor", fringe_factor
                 ], check=True)  
 
-
+            
             additional_file_content = f"""<additional>  
-                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" />
-                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")}" />
+                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" excludeEmpty="true"/>
+                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")}" excludeEmpty="true"/>
                                         <vType id="turismo" 
                                             vClass="passenger" 
                                             accel="2.6" 
@@ -813,113 +811,9 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
         await websocket.send_json({"mensaje": "Enviando calles de Sancho el fuerte."})
         await websocket.close()
 
-def obtener_coords_calle(net,edge_id):
-    # Esta función debe devolver las coordenadas de la calle (edge) dada su ID
-    # Puedes usar sumolib para leer la red y obtener las coordenadas de cada edge
-    # Ejemplo:
-    edge = net.getEdge(edge_id)
-    shape = edge.getShape()
-    coords = [net.convertXY2LonLat(x, y) for x, y in shape]
-    # Cesium espera un array plano de [lon, lat, alt, lon, lat, alt, ...]
-    coords_planas = []
-    for lon, lat in coords:
-        coords_planas.extend([lon, lat, 0])  # Altura 0 para clamping to ground
-    return coords_planas
-
-@app.get("/getCzmlEmissions")
-def generar_czml_emisiones():
-    # 1. Leer datos del Parquet
-    operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
-    if operativeSytemIsLinux==1:
-       ruta_output= r"/tmp/output"
-       net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
-    else:
-       ruta_output= r"C:\Proyectos\twin-sumo-output\output"
-       net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\zona-sancho-el-fuerte.net.xml"
-
-    net = sumolib.net.readNet(net_file)
-    ruta_edgeEmissions_p = os.path.join(ruta_output, "edgeEmissions.parquet")
-    if not os.path.exists(ruta_edgeEmissions_p):
-        raise HTTPException(status_code=404, detail="File edgeEmissions.parquet not found")
-
-
-    df = pd.read_parquet(ruta_edgeEmissions_p)
-    # Aseguramos que el tiempo esté en formato datetime
-    df['interval_begin'] = pd.to_numeric(df['interval_begin'])
-    
-    # 2. Configuración inicial del CZML
-    inicio_sim = "2026-03-16T08:00:00Z" # Ajusta a tu fecha real
-    final_sim = "2026-03-16T10:00:00Z"  # Ajusta a tu fecha real
-    czml = [{
-        "id": "document",
-        "version": "1.0",
-        "clock": {
-            "interval": f"{inicio_sim}/{final_sim}",
-            "currentTime": inicio_sim,
-            "multiplier": 1,
-                "range": "LOOP_STOP",
-                "step": "SYSTEM_CLOCK_MULTIPLIER"
-        }
-    }]
-
-    # 3. Procesar cada calle (edge)
-    for edge_id, group in df.groupby('id'):
-        rgba_list = []
-        
-        # Ordenar por tiempo para que la evolución sea correcta
-        group = group.sort_values('interval_begin')
-        
-        for _, row in group.iterrows():
-            # Definir el tiempo para este punto (ISO8601)
-            # Sumamos los segundos de la simulación a la hora de inicio
-            time_iso = f"2026-03-16T08:00:{int(row['interval_begin']):02d}Z"
-            
-            # Lógica de color según CO2 (Verde a Rojo/Púrpura)
-            co2 = row['CO2_abs'] if row['CO2_abs'] is not None else 0 # Si no hay dato, asumimos 0
-            r, g, b = 0, 255, 0 # Default Verde
-            
-            if co2 > 1000 and co2 <= 5000:
-                r, g, b = 255, 165, 0 # Naranja
-                size = 3
-            elif co2 > 5000:
-                r, g, b = 255, 0, 0   # Rojo
-                size = 5
-            
-            # Añadir al array CZML: [tiempo, R, G, B, A]
-            rgba_list.extend([time_iso, r, g, b, 200])
-
-        # Crear el objeto de la calle
-        # Nota: Necesitas las coordenadas de la calle (positions) de tu red
-        calle_packet = {
-            "id": f"{edge_id}",
-            "name": f"Emisiones en {edge_id}",
-            "polyline": {
-                "positions": {
-                    "cartographicDegrees": obtener_coords_calle(net, edge_id) # Función que saque las coordenadas
-                },
-                "material": {
-                    "solidColor": {
-                        "color": {
-                            "rgba": rgba_list # AQUÍ está la magia del cambio de color
-                        }
-                    }
-                },
-                "width": size,
-                "clampToGround": True
-            }
-        }
-        czml.append(calle_packet)
-    
-    return czml
-
 @app.get("/get-emission-data")
 def get_emission_data():
-    ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
-    ruta_output_linux = r"/tmp/"
-    ruta_windows = r"C:\Proyectos\twin-sumo-output\red_carreteras"
-    ruta_linux = r"/tmp/"
-
-
+    
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
        ruta_output= ruta_output_linux
@@ -983,10 +877,6 @@ def get_emission_data():
 
 @app.get("/get-emission-data/{file_name}")
 def get_emission_data_by_file(file_name: str):
-    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
-    ruta_output_linux = r"/tmp/output"
-    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
-    ruta_linux = r"/tmp/"
 
     operativeSytemIsLinux = 1 if platform.system() == "Linux" else 0
     if operativeSytemIsLinux == 1:
@@ -1053,11 +943,6 @@ def get_emission_data_by_file(file_name: str):
 
 @app.get("/get-traffic-data")
 def get_traffic_data():
-
-    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
-    ruta_output_linux = r"/tmp/"
-    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
-    ruta_linux = r"/tmp/"
 
 
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
@@ -1134,13 +1019,6 @@ async def websocket_simulation(websocket: WebSocket):
     
     forbiddenRoads = unquote(forbiddenRoads)
     forbiddenRoadsArray = json.loads(forbiddenRoads)
-
-    sumo_home_windows = r"D:\Proyectos\01_SUMO"
-    sumo_home_linux = "/usr/share/sumo"
-    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
-    ruta_output_linux = r"/tmp/output"
-    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
-    ruta_linux = r"/tmp/"
 
     if zonaSnachoFuerte==0: 
         if not bbox_str:
@@ -1553,7 +1431,6 @@ async def get_roads_websocket(websocket: WebSocket):
 
     
     sumo_home = os.environ.get("SUMO_HOME")
-
     if not sumo_home:
         sumo_home = r"D:\Proyectos\01_SUMO"
 
@@ -1846,7 +1723,7 @@ async def get_simulations():
         FROM public.simulations;
     """
     try:
-        connection=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
+        connection=sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin")
         conn = psycopg2.connect(
             host=connection.host,
             port=connection.port,
@@ -1877,7 +1754,7 @@ async def get_simulation(id_simulation: str):
         WHERE id_simulation = %s;
     """
     try:
-        connection=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
+        connection=sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin")
         conn = psycopg2.connect(
             host=connection.host,
             port=connection.port,
@@ -1908,10 +1785,6 @@ async def get_simulation(id_simulation: str):
 
 @app.get("/get-emission-data/{file_name}")
 def get_emission_data_by_file(file_name: str):
-    ruta_output_windows = r"D:\Proyectos\sumo_output\output"
-    ruta_output_linux = r"/tmp/output"
-    ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
-    ruta_linux = r"/tmp/"
 
     operativeSytemIsLinux = 1 if platform.system() == "Linux" else 0
     if operativeSytemIsLinux == 1:
@@ -1935,6 +1808,7 @@ def get_emission_data_by_file(file_name: str):
     pivots = {}
     for pollutant in pollutants:
         df_pivot = df.pivot(index='id', columns='interval_begin', values=pollutant)
+        df_pivot = df.dropna(subset=['NOx_perVeh'])
         df_pivot.columns = [str(int(c)) for c in df_pivot.columns]
         pivots[pollutant] = df_pivot
 
@@ -1961,6 +1835,7 @@ def get_emission_data_by_file(file_name: str):
             else:
                 properties[f"{pollutant}_por_tiempo"] = {}
 
+        
         feature = {
             "type": "Feature",
             "geometry": {
