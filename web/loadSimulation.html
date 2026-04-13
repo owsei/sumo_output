@@ -235,11 +235,11 @@
     }
 
     backwardBtn.addEventListener('click', () => {
-        setTime(time - timeStep);
+        setTime(time - window.timeStep);
     });
 
     forwardBtn.addEventListener('click', () => {
-        setTime(time + timeStep);
+        setTime(time + window.timeStep);
     });
 
     timeSlider.addEventListener('input', (e) => {
@@ -282,7 +282,7 @@
         // Lógica de animación
         setInterval(() => {
             if (isPaused) return;
-            setTime((time + timeStep) % maxSimulationTime);
+            setTime((time + window.timeStep) % window.maxSimulationTime);
         }, 500);
     });
 
