@@ -753,7 +753,7 @@ async def simulationEmissions(websocket: WebSocket):
                 if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
                     print("Delete existing parquet file")
                     os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
-
+                
                 print(" Fichero de edgeTraffic.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 

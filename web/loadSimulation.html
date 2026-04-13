@@ -33,8 +33,10 @@
                 <th>ID Simulación</th>
                 <th>Fecha</th>
                 <th>Número de Vehículos</th>
+                <th>Periodo de Agregación</th>
                 <th>Duración (seg)</th>
                 <th>Archivo Emisiones</th>
+                <th>Archivo Tráfico</th>
             </tr>
         </thead>
         <tbody id="simulations-tbody">
@@ -55,6 +57,11 @@
             <option value="fuel_abs">Fuel</option>
         </select>
     </div>
+    <div>Tiempo total de Simulación</div>
+    <div id="total-time-display"></div>
+    <div>Agregación en</div>
+    <div id="aggregation-period-display"></div>
+
     <div class="clock-label">Tiempo de Simulación</div>
     <div id="time-display">00:00:00</div>
     <div class="progress-container">
@@ -108,10 +115,14 @@
     const timeSlider = document.getElementById('time-slider');
     const timeDisplay = document.getElementById('time-display');
     const progressBar = document.getElementById('progress-bar');
+    const totalTimeDisplay = document.getElementById('total-time-display');
+    const aggregationPeriodDisplay = document.getElementById('aggregation-period-display');
+
+    
     let selectedPollutant = 'NOx_abs'; // Default
     let time = 0; // Global time
-    const maxSimulationTime = 7200;
-    const timeStep = 10;
+    window.maxSimulationTime = 3600;
+    window.timeStep = 10;
     let selectedSimulation = null;
 
     // Cargar simulaciones
@@ -127,8 +138,10 @@
                     <td>${sim.id_simulation}</td>
                     <td>${sim.date}</td>
                     <td>${sim.num_vehicles}</td>
+                    <td>${sim.aggregation_period}</td>
                     <td>${sim.duration_sec}</td>
                     <td>${sim.file_emissions}</td>
+                    <td>${sim.file_traffic}</td>
                 `;
                 row.addEventListener('click', () => selectSimulation(sim, row));
                 tbody.appendChild(row);
@@ -143,19 +156,24 @@
         document.querySelectorAll('#simulations-tbody tr').forEach(r => r.classList.remove('selected-row'));
         row.classList.add('selected-row');
         selectedSimulation = sim;
-        loadEmissions(sim.file_emissions);
+        loadEmissions(sim);
     }
 
-    async function loadEmissions(fileName) {
+    async function loadEmissions(sim) {
         mostrarSpinner();
         try {
-            const response = await fetch(`${window.endPoint}/get-emission-data/${fileName}`);
+            const response = await fetch(`${window.endPoint}/get-emission-data/${sim.file_emissions}`);
+            window.timeStep = sim.aggregation_period;
+            window.maxSimulationTime = sim.duration_sec;
+
             const geojsonData = await response.json();
             console.log(geojsonData);
             ocultarSpinner();
             isPaused = true;
             btn.innerText = 'Reanudar';
             document.getElementById('simulation-clock').style.display = 'block';
+            totalTimeDisplay.innerText = formatTime(window.maxSimulationTime);
+            aggregationPeriodDisplay.innerText = `${window.timeStep} segundos`;
 
             // Si ya hay source, actualizar data
             if (map.getSource('sumo-source')) {
@@ -204,14 +222,14 @@
 
     function renderTimeUI() {
         timeDisplay.innerText = formatTime(time);
-        const percentage = (time / maxSimulationTime) * 100;
+        const percentage = (time / window.maxSimulationTime) * 100;
         progressBar.style.width = `${percentage}%`;
         timeSlider.value = time.toString();
     }
 
     function setTime(newTime) {
-        const bounded = Math.max(0, Math.min(maxSimulationTime, newTime));
-        time = Math.round(bounded / timeStep) * timeStep;
+        const bounded = Math.max(0, Math.min(window.maxSimulationTime, newTime));
+        time = Math.round(bounded / window.timeStep) * window.timeStep;
         renderTimeUI();
         updateLayer();
     }
