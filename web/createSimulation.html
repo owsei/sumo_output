@@ -102,6 +102,47 @@
                 </div>
             </div>
         </div>
+
+        <!-- Tabla de simulaciones -->
+        <div class="row g-4 mt-1">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <strong><i class="bi bi-table me-2"></i>Simulaciones registradas</strong>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="loadSimulations()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center">ID</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Vehículos</th>
+                                        <th class="text-end">Duración (s)</th>
+                                        <th class="text-end">Fringe factor</th>
+                                        <th class="text-end">Trip period (s)</th>
+                                        <th class="text-end">Agregación (s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="simulationsTableBody">
+                                    <tr id="simulationsLoading">
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando...
+                                        </td>
+                                    </tr>
+                                    <tr id="simulationsError" class="d-none">
+                                        <td colspan="7" class="text-center text-danger py-2"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </main>
 
     <script>
@@ -230,8 +271,61 @@
                 }
                 runBtn.disabled = false;
                 disconnectBtn.disabled = true;
+                loadSimulations();
             };
         });
+
+        // --- Tabla de simulaciones ---
+        async function loadSimulations() {
+            const apiBase = (() => {
+                const raw = document.getElementById('api_base_url').value.trim();
+                return raw.endsWith('/') ? raw : `${raw}/`;
+            })();
+
+            const tbody = document.getElementById('simulationsTableBody');
+            const loadingRow = document.getElementById('simulationsLoading');
+            const errorRow = document.getElementById('simulationsError');
+
+            tbody.querySelectorAll('tr:not(#simulationsLoading):not(#simulationsError)').forEach(r => r.remove());
+            loadingRow.classList.remove('d-none');
+            errorRow.classList.add('d-none');
+
+            try {
+                const resp = await fetch(`${apiBase}simulations`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                loadingRow.classList.add('d-none');
+
+                if (data.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="7" class="text-center text-muted">No hay simulaciones registradas</td>';
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                data.forEach(sim => {
+                    const tr = document.createElement('tr');
+                    const date = sim.date ? new Date(sim.date).toLocaleString('es-ES') : '-';
+                    tr.innerHTML = `
+                        <td class="text-center">${sim.id_simulation}</td>
+                        <td>${date}</td>
+                        <td class="text-end">${sim.num_vehicles}</td>
+                        <td class="text-end">${sim.duration_sec}</td>
+                        <td class="text-end">${sim.fringe_factor}</td>
+                        <td class="text-end">${sim.trip_period}</td>
+                        <td class="text-end">${sim.aggregation_period}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                loadingRow.classList.add('d-none');
+                errorRow.classList.remove('d-none');
+                errorRow.querySelector('td').textContent = `Error al cargar simulaciones: ${err.message}`;
+            }
+        }
+
+        document.getElementById('api_base_url').addEventListener('change', loadSimulations);
+        loadSimulations();
     </script>
 </body>
 </html>

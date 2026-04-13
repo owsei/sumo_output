@@ -58,9 +58,9 @@
         </select>
     </div>
     <div>Tiempo total de Simulación</div>
-    <div id="total-time-display"></div>
-    <div>Agregación en</div>
-    <div id="aggregation-period-display"></div>
+    <b><div id="total-time-display"></div></b>
+    <div>Tiempo de Agregación</div>
+    <b><div id="aggregation-period-display"></div></b>
 
     <div class="clock-label">Tiempo de Simulación</div>
     <div id="time-display">00:00:00</div>
@@ -115,6 +115,7 @@
     const timeSlider = document.getElementById('time-slider');
     const timeDisplay = document.getElementById('time-display');
     const progressBar = document.getElementById('progress-bar');
+
     const totalTimeDisplay = document.getElementById('total-time-display');
     const aggregationPeriodDisplay = document.getElementById('aggregation-period-display');
 
@@ -174,6 +175,7 @@
             document.getElementById('simulation-clock').style.display = 'block';
             totalTimeDisplay.innerText = formatTime(window.maxSimulationTime);
             aggregationPeriodDisplay.innerText = `${window.timeStep} segundos`;
+
 
             // Si ya hay source, actualizar data
             if (map.getSource('sumo-source')) {

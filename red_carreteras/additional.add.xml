@@ -1,6 +1,6 @@
 <additional>  
-                                        <edgeData id="edgeEmissions" type="emissions" freq="60" file="D:\Proyectos\sumo_output\output\edgeEmissions.xml" excludeEmpty="true"/>
-                                        <edgeData id="edgeTraffic" freq="60" file="D:\Proyectos\sumo_output\output\edgeTraffic.xml" excludeEmpty="true" />
+                                        <edgeData id="edgeEmissions" type="emissions" freq="10" file="C:\Proyectos\sumo_output_mia\output\edgeEmissions_721830f7.xml" excludeEmpty="true"/>
+                                        <edgeData id="edgeTraffic" freq="10" file="C:\Proyectos\sumo_output_mia\output\edgeTraffic_721830f7.xml" excludeEmpty="true"/>
                                         <vType id="turismo" 
                                             vClass="passenger" 
                                             accel="2.6" 
