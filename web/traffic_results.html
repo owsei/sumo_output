@@ -264,9 +264,6 @@
         // btnLaunch.disabled = true; // Deshabilitamos el botón de lanzamiento después de hacer clic
     });
 
-
-    
-
     const map = (window.map = new maplibregl.Map({
         container: 'map',
         style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
@@ -817,8 +814,7 @@
                 selectedFeature = feature;
                 selectedStreetNameEl.textContent = feature.properties.nombre || feature.properties.id || "Calle sin nombre";
                 streetChartSubtitleEl.textContent = "Serie temporal de " + metricLabels[selectedMetric] + " para " + selectedStreetNameEl.textContent + ".";
-                renderStreetChart();
-                updateSummaryCards();
+               
 
                 const currentValue = getMetricValue(feature, selectedMetric, currentTime).toFixed(2);
                 new maplibregl.Popup({ offset: 8 })

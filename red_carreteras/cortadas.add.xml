@@ -1,0 +1,15 @@
+<additional>
+    <rerouter id="cierre_calle" edges="calle_antes_del_corte">
+         <interval begin="0" end="2000">
+             <closingLaneReroute id="4806288#0.11"/>
+             <closingLaneReroute id="186765532#0.24"/>
+             <closingLaneReroute id="23817698"/>
+             <closingLaneReroute id="23817727#1.5"/>
+             <closingLaneReroute id="189287751"/>
+             <closingLaneReroute id="99206459"/>
+             <closingLaneReroute id="-22756817#0.128"/>
+             <closingLaneReroute id="-22756817#0.58"/>
+             <closingLaneReroute id="22756817#0"/>
+             <closingLaneReroute id="22756817#0.12"/></interval>
+     </rerouter>
+ </additional>

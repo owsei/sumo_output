@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crear simulación | SUMO</title>
+    <!-- MAPLIBRE-->
+    <link rel='stylesheet' href='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.css' />
+    <script src='https://unpkg.com/maplibre-gl@5.20.1/dist/maplibre-gl.js'></script>
+    
+    <!--BOOTSTRAP-->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles/styles.css">
+    <style>
+        html,body {
+            height: 100%;
+            background: #f8f9fa;
+            margin: 0; 
+            padding: 0;
+        }
+        .status-log {
+            background: #0b1727;
+            color: #d2e5ff;
+            border-radius: 0.5rem;
+            min-height: 260px;
+            max-height: 340px;
+            overflow-y: auto;
+            padding: 0.9rem;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 0.9rem;
+            white-space: pre-wrap;
+        }
+        .status-log .line {
+            margin-bottom: 0.35rem;
+        }
+
+        #map { 
+            height: 600px ; 
+            border: 1px solid #000; 
+        }
+    </style>
+
+</head>
+<body>
+    <div id="navbar-container"></div>
+
+    <main class="container py-4">
+        <!-- Tabla de simulaciones -->
+        <div class="row g-4 mt-1">
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                        <strong><i class="bi bi-table me-2"></i>Simulaciones registradas</strong>
+                        <button type="button" class="btn btn-sm btn-outline-light" onclick="loadSimulations()">
+                            <i class="bi bi-arrow-clockwise me-1"></i>Actualizar
+                        </button>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover table-striped mb-0">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th class="text-center">ID</th>
+                                        <th>Fecha</th>
+                                        <th class="text-end">Vehículos</th>
+                                        <th class="text-end">Duración (s)</th>
+                                        <th class="text-end">Fringe factor</th>
+                                        <th class="text-end">Trip period (s)</th>
+                                        <th class="text-end">Agregación (s)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="simulationsTableBody">
+                                    <tr id="simulationsLoading">
+                                        <td colspan="7" class="text-center text-muted py-3">
+                                            <div class="spinner-border spinner-border-sm me-2" role="status"></div>Cargando...
+                                        </td>
+                                    </tr>
+                                    <tr id="simulationsError" class="d-none">
+                                        <td colspan="7" class="text-center text-danger py-2"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+
+        window.endPoint = 'http://localhost:8001';
+
+        fetch('./js/navbar.html')
+        .then(response => response.text())
+        .then(data => {
+            document.getElementById('navbar-container').innerHTML = data;
+        });
+
+
+        // --- Tabla de simulaciones ---
+        async function loadSimulations() {
+            
+
+            const tbody = document.getElementById('simulationsTableBody');
+            const loadingRow = document.getElementById('simulationsLoading');
+            const errorRow = document.getElementById('simulationsError');
+
+            tbody.querySelectorAll('tr:not(#simulationsLoading):not(#simulationsError)').forEach(r => r.remove());
+            loadingRow.classList.remove('d-none');
+            errorRow.classList.add('d-none');
+
+            try {
+                const resp = await fetch(`${window.endPoint}/simulations`);
+                if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                const data = await resp.json();
+                loadingRow.classList.add('d-none');
+
+                if (data.length === 0) {
+                    const tr = document.createElement('tr');
+                    tr.innerHTML = '<td colspan="7" class="text-center text-muted">No hay simulaciones registradas</td>';
+                    tbody.appendChild(tr);
+                    return;
+                }
+
+                data.forEach(sim => {
+                    const tr = document.createElement('tr');
+                    const date = sim.date ? new Date(sim.date).toLocaleString('es-ES') : '-';
+                    tr.innerHTML = `
+                        <td class="text-center">${sim.id_simulation}</td>
+                        <td>${date}</td>
+                        <td class="text-end">${sim.num_vehicles}</td>
+                        <td class="text-end">${sim.duration_sec}</td>
+                        <td class="text-end">${sim.fringe_factor}</td>
+                        <td class="text-end">${sim.trip_period}</td>
+                        <td class="text-end">${sim.aggregation_period}</td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                loadingRow.classList.add('d-none');
+                errorRow.classList.remove('d-none');
+                errorRow.querySelector('td').textContent = `Error al cargar simulaciones: ${err.message}`;
+            }
+        }
+
+        loadSimulations();
+        
+    </script>
+</body>
+</html>

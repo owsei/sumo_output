@@ -164,6 +164,8 @@
             data: geojsonData // Pasamos los datos recibidos de la API
         });
 
+        
+
         map.addLayer({
             id: 'capa-emissions',
             type: 'line',
@@ -200,6 +202,9 @@
         return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
     }
 
+
+
+    
 
 </script>
 

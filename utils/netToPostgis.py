@@ -16,7 +16,7 @@ import pyarrow.parquet as pa
 
 sumo_home = os.environ.get("SUMO_HOME")
 ruta= r"D:\Proyectos\sumo_output\red_carreteras"
-ruta_output= r"D:\Proyectos\sumo_output\output"
+ruta_output= r"C:\Proyectos\twin-sumo-output\utils\sumo_output\output"
 
 
 def net_to_postgres(net_file):
@@ -354,10 +354,102 @@ def simulation_to_postgres():
         f_simulation.close()
         print(f"Error al cargar datos de la simulación: {e} ")
 
+
+async def convertirEmissionsXmlToParquet(ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
+    try:
+        tree = ET.parse(ruta_emissions)
+        root = tree.getroot()
+
+        lista_final = []
+
+        # 2. Recorrer cada intervalo (el padre)
+        for interval in root.findall(rootLabel):
+            # Extraemos los datos del tiempo
+            inicio = interval.get('begin')
+            fin = interval.get('end')
+            
+            # 3. Recorrer cada edge dentro de ese intervalo (el hijo)
+            for edge in interval.findall(nestLabel):
+                # Copiamos todos los atributos del edge (id, CO2, fuel, etc.)
+                datos_fila = edge.attrib.copy()
+                
+                # Añadimos la información del tiempo del padre a esta fila
+                datos_fila['interval_begin'] = inicio
+                datos_fila['interval_end'] = fin
+                
+                lista_final.append(datos_fila)
+
+                # 4. Crear el DataFrame
+        df = pd.DataFrame(lista_final)
+        # 5. Limpieza de datos (Crucial para Cesium y análisis)
+        # Convertimos a números lo que debe ser número
+        cols_numericas = [c for c in df.columns if c not in ['id', 'interval_begin', 'interval_end']]
+        for col in cols_numericas:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Aseguramos que los tiempos también sean numéricos para filtrar en el mapa
+        df['interval_begin'] = pd.to_numeric(df['interval_begin'])
+        df['interval_end'] = pd.to_numeric(df['interval_end'])
+
+        # 6. Guardar a Parquet
+        # Mantenemos el 'id' intacto para que Cesium pueda hacer el JOIN con tu red .js o .geojson
+        df.to_parquet(ruta_parquet, engine='pyarrow', index=False)
+        
+        print(f"Éxito: Se han procesado {len(df)} registros de edges.")
+
+    except Exception as e:
+        print(f"Error al ejecutar SUMO: {e}")
+
+async def convertirTrafficXmlToParquet(ruta_traffic,ruta_parquet,rootLabel='interval',nestLabel='edge'):
+    try:
+        tree = ET.parse(ruta_traffic)
+        root = tree.getroot()
+
+        lista_final = []
+
+        # 2. Recorrer cada intervalo (el padre)
+        for interval in root.findall(rootLabel):
+            # Extraemos los datos del tiempo
+            inicio = interval.get('begin')
+            fin = interval.get('end')
+            
+            # 3. Recorrer cada edge dentro de ese intervalo (el hijo)
+            for edge in interval.findall(nestLabel):
+                # Copiamos todos los atributos del edge (id, CO2, fuel, etc.)
+                datos_fila = edge.attrib.copy()
+                
+                # Añadimos la información del tiempo del padre a esta fila
+                datos_fila['interval_begin'] = inicio
+                datos_fila['interval_end'] = fin
+                
+                lista_final.append(datos_fila)
+
+                # 4. Crear el DataFrame
+        df = pd.DataFrame(lista_final)
+        # 5. Limpieza de datos (Crucial para Cesium y análisis)
+        # Convertimos a números lo que debe ser número
+        cols_numericas = [c for c in df.columns if c not in ['id', 'interval_begin', 'interval_end']]
+        for col in cols_numericas:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+        
+        # Aseguramos que los tiempos también sean numéricos para filtrar en el mapa
+        df['interval_begin'] = pd.to_numeric(df['interval_begin'])
+        df['interval_end'] = pd.to_numeric(df['interval_end'])
+
+        # 6. Guardar a Parquet
+        # Mantenemos el 'id' intacto para que Cesium pueda hacer el JOIN con tu red .js o .geojson
+        df.to_parquet(ruta_parquet, engine='pyarrow', index=False)
+        
+        print(f"Éxito: Se han procesado {len(df)} registros de edges.")
+    except Exception as e:
+        print(f"Error al ejecutar SUMO: {e}")
     
 if __name__ == "__main__":
     net_file = os.path.join(ruta, "pamplona.net.xml")
     net_to_postgres(net_file)
     simulation_to_postgres()
+    convertirTrafficXmlToParquet(os.path.join(ruta_output, "edgeTraffic.xml"), os.path.join(ruta_output, "edgeTraffic.parquet"))
+    convertirTrafficXmlToParquet(os.path.join(ruta_output, "edgeTraffic.xml"), os.path.join(ruta_output, "edgeTraffic.parquet"))
+
 
 

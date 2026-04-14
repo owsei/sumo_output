@@ -111,7 +111,7 @@ async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, webso
     types_filter = "|".join(bbox.road_types)
     print("Filtros de tipos: ", types_filter)
     # Overpass usa el orden: south, west, north, east
-    overpass_url = "https://overpass-api.de/api/interpreter"
+    overpass_url = "https://overpass.kumi.systems/api/interpreter"
     # Esta query descarga solo las vías (ways) que coincidan con los tipos
     # y también los nodos (nodes) que forman esas vías.
     try:
@@ -588,6 +588,15 @@ async def simulationEmissions(websocket: WebSocket):
     if aggregation_period_sec is None:
         aggregation_period_sec = 10  # Valor por defecto
 
+    banned_roads = websocket.query_params.get("bannedStreets")
+    if banned_roads is not None:
+        banned_roads = unquote(banned_roads).split(",")
+        print("Carreteras a cerrar durante la simulación: ", banned_roads)
+    else:
+        banned_roads = []
+        print("No se han cerrado carreteras para la simulación.")
+
+
     simulation_params = sumoClass.simulationParams(num_vehicles, duration_sec,fringe_factor, aggregation_period_sec, trip_period)
     await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
@@ -688,6 +697,30 @@ async def simulationEmissions(websocket: WebSocket):
                 print("Error al crear el archivo additional.add.xml:", e)
 
 
+             # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
+            additional_closedEdge_file_content =f"""<additional>
+                                <rerouter id="cierre_calle" edges="calle_antes_del_corte">
+                                    <interval begin="0" end="{duration_sec}">"""
+            
+            for road in banned_roads:
+                additional_closedEdge_file_content += f"""
+                                        <closingLaneReroute id="{road}"/>"""
+            additional_closedEdge_file_content += f"""</interval>
+                                </rerouter>
+                            </additional>"""
+            
+            print("Contenido del archivo closedEdge.add.xml: ", additional_closedEdge_file_content)
+            
+            try:
+                with open(os.path.join(ruta, "closedEdge.add.xml"), 'w') as f_additional:
+                    f_additional.write(additional_closedEdge_file_content)
+                f_additional.close()
+                print("Archivo closedEdge.add.xml creado correctamente", os.path.join(ruta, "closedEdge.add.xml"))
+            except Exception as e:
+                f_additional.close()
+                print("Error al crear el archivo closedEdge.add.xml:", e)
+
+
             # crea el archivo de configuración SUMO
             if operativeSytemIsLinux==1:
                 config_file = os.path.join(ruta_linux, f"simulation_{uuid_simulation}.sumocfg")
@@ -727,9 +760,10 @@ async def simulationEmissions(websocket: WebSocket):
                         "-c", config_file,
                         "-b", "0",
                         "-e", duration_sec,  # Simular duration_sec segundos
+                        "--emission-output.geo", "true",
                         # "-n", net_file,
                         # "-r", route_file,
-                        "-v", "true"
+                        "-v", "true",
                     ], check=True,capture_output=True, text=True)
 
                 await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
@@ -743,9 +777,9 @@ async def simulationEmissions(websocket: WebSocket):
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones.🗄️"})   
                 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                if os.path.exists(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")):
-                    print("Delete existing parquet file")
-                    os.remove(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"))
+                # if os.path.exists(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")):
+                #     print("Delete existing parquet file")
+                #     os.remove(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"))
 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
                 ruta_traffic_p = os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet")
@@ -756,9 +790,9 @@ async def simulationEmissions(websocket: WebSocket):
                 await convertirTrafficXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
                 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
-                    print("Delete existing parquet file")
-                    os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
+                # if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
+                #     print("Delete existing parquet file")
+                #     os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
 
                 print(" Fichero de edgeTraffic.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
@@ -816,6 +850,50 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
     finally:
         await websocket.send_json({"mensaje": "Enviando calles de Sancho el fuerte."})
         await websocket.close()
+
+
+@app.get("/getPamplonaStreets")
+def getPamplonaStreets():
+    
+    operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
+    if operativeSytemIsLinux==1:
+       ruta_output= ruta_output_linux
+       net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+    else:
+       ruta_output= ruta_output_windows
+       net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    # 1. Leer el parquet (ajusta la ruta a tu archivo)    # 4. Crear el JSON final con geometría y datos de tráfico
+    features = []
+
+    
+    for edge in net.getEdges():
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge.getID(),
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+        
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": properties
+        }
+        features.append(feature)
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
 
 @app.get("/get-emission-data")
 def get_emission_data():
@@ -1069,7 +1147,6 @@ def get_traffic_data_by_file(file_name: str):
         })
 
     return {"type": "FeatureCollection", "features": features}
-
 
 @app.websocket("/ws/simulationTraci")
 async def websocket_simulation(websocket: WebSocket):
