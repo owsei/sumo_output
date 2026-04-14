@@ -697,14 +697,20 @@ async def simulationEmissions(websocket: WebSocket):
                 print("Error al crear el archivo additional.add.xml:", e)
 
 
-             # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
+
+            # file=f"""<rerouter>
+            #     <interval begin="0" end="3600">
+            #         <closingReroute id="<EDGE_ID>" disallow="[all]"/>
+            #     </interval>
+            # </rerouter>"""
+
+            # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
             additional_closedEdge_file_content =f"""<additional>
-                                <rerouter id="cierre_calle" edges="calle_antes_del_corte">
+                                <rerouter>
                                     <interval begin="0" end="{duration_sec}">"""
-            
             for road in banned_roads:
                 additional_closedEdge_file_content += f"""
-                                        <closingLaneReroute id="{road}"/>"""
+                                        <closingReroute id="{road}" disallow="[all]"/>"""
             additional_closedEdge_file_content += f"""</interval>
                                 </rerouter>
                             </additional>"""
@@ -764,6 +770,7 @@ async def simulationEmissions(websocket: WebSocket):
                         # "-n", net_file,
                         # "-r", route_file,
                         "-v", "true",
+                        "--device.rerouting.probability", "0.1"
                     ], check=True,capture_output=True, text=True)
 
                 await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
@@ -850,7 +857,6 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
     finally:
         await websocket.send_json({"mensaje": "Enviando calles de Sancho el fuerte."})
         await websocket.close()
-
 
 @app.get("/getPamplonaStreets")
 def getPamplonaStreets():
@@ -1862,7 +1868,8 @@ async def get_simulations():
     
     query = """
         SELECT id_simulation, "date", num_vehicles, duration_sec, fringe_factor, trip_period, aggregation_period, file_emissions, file_traffic
-        FROM public.simulations;
+        FROM public.simulations
+        order by "date" desc;
     """
     try:
         connection=sumoBD

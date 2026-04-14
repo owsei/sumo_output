@@ -213,21 +213,21 @@
         try {
             
             
-            const responseStreets = await fetch(window.endPoint + '/getPamplonaStreets')
-            const streetsData = await responseStreets.json();
-            map.addSource('streets-source', {
-                type: 'geojson',
-                data: streetsData // Pasamos los datos recibidos de la API
-            });
-            map.addLayer({
-                id: 'capa-streets',
-                type: 'line',
-                source: 'streets-source',
-                paint: {
-                    'line-width': 2,
-                    'line-color': '#2690D1'
-                }
-            });
+            // const responseStreets = await fetch(window.endPoint + '/getPamplonaStreets')
+            // const streetsData = await responseStreets.json();
+            // map.addSource('streets-source', {
+            //     type: 'geojson',
+            //     data: streetsData // Pasamos los datos recibidos de la API
+            // });
+            // map.addLayer({
+            //     id: 'capa-streets',
+            //     type: 'line',
+            //     source: 'streets-source',
+            //     paint: {
+            //         'line-width': 2,
+            //         'line-color': '#2690D1'
+            //     }
+            // });
             
             
             
