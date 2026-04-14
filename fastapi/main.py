@@ -829,7 +829,8 @@ async def simulationEmissions(websocket: WebSocket):
                     </input>
                     <routing>
                         <device.rerouting.probability value="1.0"/>
-                        <device.rerouting.period value="0"/>
+                        <device.rerouting.period value="60"/>
+                        <weight-files value="weights_{uuid_simulation}.xml"/>
                     </routing>
                 </configuration>""")
             
