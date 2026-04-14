@@ -665,21 +665,27 @@ async def simulationEmissions(websocket: WebSocket):
             if operativeSytemIsLinux==1:
                 net_file = os.path.join(ruta_linux, "pamplona.net.xml")
                 print("Archivo NET creado correctamente", net_file)
-                route_file= os.path.join(ruta_output, f"mapa_{uuid_simulation}.rou.xml")
-                print("Archivo ROUT creado correctamente", route_file)
+                
             else:
                 net_file = os.path.join(ruta_windows, "pamplona.net.xml")
                 print("Archivo NET creado correctamente", net_file)
-                route_file= os.path.join(ruta_output, f"mapa_{uuid_simulation}.rou.xml")
-                print("Archivo ROUT creado correctamente", route_file)
+            
+            route_file= os.path.join(ruta_output, f"pamplona_{uuid_simulation}.rou.xml")
+            print("Archivo ROUT creado correctamente", route_file)
+            trips_file= os.path.join(ruta_output, f"trips_{uuid_simulation}.trip.xml")
+            print("Archivo ROUT creado correctamente", trips_file)
+            weight_file= os.path.join(ruta_output, f"weights_{uuid_simulation}.xml")
+            print("Archivo weights.xml creado correctamente", weight_file)
 
+            banned_roads_str= ", ".join(banned_roads)
 
             random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
             if operativeSytemIsLinux==1:
                 subprocess.run([
                     "python3", random_trips,
                     "-n", net_file,
-                    "-r", route_file,
+                    # "-r", route_file,
+                    "-o", trips_file,
                     "-e", duration_sec,  # Simular duration_sec segundos de tráfico
                     "--period", trip_period, # Aparece un coche cada trip_period segundos
                     "--fringe-factor", fringe_factor
@@ -688,12 +694,40 @@ async def simulationEmissions(websocket: WebSocket):
                 subprocess.run([
                     "python", random_trips,
                     "-n", net_file,
-                    "-r", route_file,
+                    # "-r", route_file,
+                    "-o", trips_file,
                     "-e", duration_sec,  # Simular duration_sec segundos de tráfico
                     "--period", trip_period, # Aparece un coche cada trip_period segundos
                     "--fringe-factor", fringe_factor
                 ], check=True)  
 
+            if operativeSytemIsLinux==1:
+                duarouter = "duarouter"
+            else:
+                duarouter = os.path.join(sumo_home, "bin", "duarouter")  # sin G
+
+
+            weight_file_content=f""" <weights>"""
+            for road in banned_roads:
+                weight_file_content += f"""<edge id="{road}" traveltime="100000"/>"""
+            weight_file_content+=f""" </weights>"""
+            
+            try:
+                with open(weight_file, 'w') as f_additional:
+                    f_additional.write(weight_file_content)
+                f_additional.close()
+                print("Archivo weights.xml creado correctamente", weight_file)
+            except Exception as e:
+                f_additional.close()
+                print(f"Error al crear el archivo weights_{uuid_simulation}.xml:", e)
+
+            subprocess.run([
+                duarouter, 
+                "-n", net_file, 
+                "-r", trips_file, 
+                "-o", route_file,
+                "--weight-files", weight_file
+                ], check=True)
             
             additional_file_content = f"""<additional>  
                                         <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" excludeEmpty="true"/>
@@ -744,26 +778,13 @@ async def simulationEmissions(websocket: WebSocket):
             print("Archivo additional.add.xml: ", os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"))
 
 
-            # file=f"""<rerouter>
-            #     <interval begin="0" end="3600">
-            #         <closingReroute id="<EDGE_ID>" disallow="[all]"/>
-            #     </interval>
-            # </rerouter>"""
-
-
             net = sumolib.net.readNet(net_file)
             # Buscar todas las calles que son "entradas" (no tienen calles que entren en ellas)
             calles_entrada = []
             for edge in net.getEdges():
                 if len(edge.getIncoming()) == 0:
                     calles_entrada.append(edge.getID())
-            edges_str = " ".join(calles_entrada)
-
-
-            # generar_rerouter_cierre(os.path.join(ruta_output,f"closedEdge_{uuid_simulation}.add.xml"), banned_roads, edges_str)
-            # ruta_closedEdge = os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml")
-            # closedEdge_file = f"closedEdge_{uuid_simulation}.add.xml"
-
+            edges_str = ", ".join(calles_entrada)
 
             # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
             additional_closedEdge_file_content =f"""<additional>
@@ -804,7 +825,7 @@ async def simulationEmissions(websocket: WebSocket):
                     <input>
                         <net-file value="{net_file}"/>
                         <route-files value="{route_file}"/>
-                        <additional-files value="additional_{uuid_simulation}.add.xml closedEdge_{uuid_simulation}.add.xml"/>
+                        <additional-files value="additional_{uuid_simulation}.add.xml"/>
                     </input>
                     <routing>
                         <device.rerouting.probability value="1.0"/>
@@ -834,7 +855,8 @@ async def simulationEmissions(websocket: WebSocket):
                         # "-n", net_file,
                         # "-r", route_file,
                         "-v", "true",
-                        "--device.rerouting.probability", "0.1"
+                        "--device.rerouting.probability", "1",
+                        "--device.rerouting.period", "60"
                     ], check=True,capture_output=True, text=True)
 
                 await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
