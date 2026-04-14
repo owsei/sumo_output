@@ -335,6 +335,9 @@
                         "<div style=\"font-family:Segoe UI,Tahoma,Geneva,Verdana,sans-serif;min-width:220px\">" +
                             "<strong>" + (feature.properties.nombre || "Calle sin nombre") + "</strong><br>" +
                             "ID: " + feature.properties.id + "<br>" +
+                            "Tipo: " + feature.properties.tipo + "<br>" +
+                            "Velocidad: " + feature.properties.velocidad_max + " km/h<br>" +   
+                            "Carriles: " + feature.properties.carriles + "<br><br>" +
                             "<button onclick=\"prohibirStreet('" + feature.properties.id + "')\">Prohibir</button>" +
                         "</div>"
                     )

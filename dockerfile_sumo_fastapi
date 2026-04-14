@@ -24,6 +24,8 @@ COPY ./red_carreteras/zona-sancho-el-fuerte.rou.xml /tmp/zona-sancho-el-fuerte.r
 
 COPY ./red_carreteras/pamplona.net.xml /tmp/pamplona.net.xml
 COPY ./red_carreteras/additional.add.xml /tmp/additional.add.xml
+COPY ./red_carreteras/closedEdge.add.xml /tmp/closedEdge.add.xml
+
 COPY ./red_carreteras/mapa.rou.xml /tmp/mapa.rou.xml
 COPY ./red_carreteras/vehicles.add.xml /tmp/vehicles.add.xml
 COPY ./red_carreteras/simulation.sumocfg /tmp/simulation.sumocfg
