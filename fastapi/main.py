@@ -34,13 +34,13 @@ import clases.sumoClass as sumoClass
 
 url_overpass = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 
-sumo_home_windows = r"D:\Proyectos\01_SUMO"
+sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
 sumo_home_linux = "/usr/share/sumo"
 
-ruta_output_windows = r"D:\Proyectos\sumo_output\output"
+ruta_output_windows = r"c:\Proyectos\sumo_output_mia\output"
 ruta_output_linux = r"/tmp/output/"
 
-ruta_windows = r"D:\Proyectos\sumo_output\red_carreteras"
+ruta_windows = r"c:\Proyectos\sumo_output_mia\red_carreteras"
 ruta_linux = r"/tmp/"
 
 sumoBD=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
@@ -421,7 +421,7 @@ def parse_sumo_traffic_edge(file_path):
     
 # funcion de guardado en BD de la simulacion, con la idea de que se ejecute al finalizar la simulacion y el parseo de los resultados de emisiones 
 # y trafico, para cargar esos datos en Postgres y poder hacer consultas SQL posteriormente
-def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic,ruta_output, connection_params: sumoClass.connectionParams, simulation_params: sumoClass.simulationParams):
+def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic, connection_params: sumoClass.connectionParams, simulation_params: sumoClass.simulationParams):
     # Aquí iría la lógica para cargar los datos de la simulación (vehículos, tiempos, etc.) en Postgres
     # Esto dependerá de cómo estés exportando esos datos desde SUMO (CSV, JSON, etc.)
     conn = psycopg2.connect(
@@ -777,14 +777,13 @@ async def simulationEmissions(websocket: WebSocket):
 
             print("Archivo additional.add.xml: ", os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"))
 
-
             net = sumolib.net.readNet(net_file)
             # Buscar todas las calles que son "entradas" (no tienen calles que entren en ellas)
             calles_entrada = []
             for edge in net.getEdges():
                 if len(edge.getIncoming()) == 0:
                     calles_entrada.append(edge.getID())
-            edges_str = ", ".join(calles_entrada)
+            edges_str = " ".join(calles_entrada)
 
             # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
             additional_closedEdge_file_content =f"""<additional>
@@ -792,7 +791,7 @@ async def simulationEmissions(websocket: WebSocket):
                                     <interval begin="0" end="{duration_sec}">"""
             for road in banned_roads:
                 additional_closedEdge_file_content += f"""
-                                        <closingReroute id="{road}" />"""
+                                        <closingReroute id="{road}" disallow="all"/>"""
             additional_closedEdge_file_content += f"""</interval>
                                 </rerouter>
                             </additional>"""
@@ -825,7 +824,7 @@ async def simulationEmissions(websocket: WebSocket):
                     <input>
                         <net-file value="{net_file}"/>
                         <route-files value="{route_file}"/>
-                        <additional-files value="additional_{uuid_simulation}.add.xml"/>
+                        <additional-files value="additional_{uuid_simulation}.add.xml, closedEdge_{uuid_simulation}.add.xml"/>
                     </input>
                     <routing>
                         <device.rerouting.probability value="1.0"/>
@@ -892,7 +891,7 @@ async def simulationEmissions(websocket: WebSocket):
                 print(f" Fichero de edgeTraffic_{uuid_simulation}.parquet creado")
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 
-                simulation_to_postgres(f"edgeEmissions_{uuid_simulation}.parquet", f"edgeTraffic_{uuid_simulation}.parquet",ruta_output, sumoBD, simulation_params)
+                simulation_to_postgres(f"edgeEmissions_{uuid_simulation}.parquet", f"edgeTraffic_{uuid_simulation}.parquet", sumoBD, simulation_params)
                 await websocket.send_json({"mensaje": "Datos de la simulación cargados en Postgres.🗄️"})
 
                 final_time = time.time()
@@ -961,9 +960,6 @@ def getPamplonaStreets():
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)    # 4. Crear el JSON final con geometría y datos de tráfico
     features = []
-
-    # carreteras=net.getEdges().filter(lambda e: e.getType() in road_types)
-
     for edge in net.getEdges():
         tipo=edge.getType()
         if edge.getType() not in road_types:
