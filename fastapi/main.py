@@ -856,7 +856,8 @@ async def simulationEmissions(websocket: WebSocket):
                         # "-r", route_file,
                         "-v", "true",
                         "--device.rerouting.probability", "1",
-                        "--device.rerouting.period", "60"
+                        "--device.rerouting.period", "60",
+                        "--ignore-route-errors", "true"
                     ], check=True,capture_output=True, text=True)
 
                 await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
