@@ -848,16 +848,20 @@ async def simulationEmissions(websocket: WebSocket):
 
             config_file_content+=f"""</input>
                     <routing>
-                        <device.rerouting.probability value="1.0"/>
-                        <device.rerouting.period value="60"/>"""
+                        <device.rerouting.probability value="1"/>
+                        <device.rerouting.period value="10"/>"""
             
             if len(banned_roads)>1:    
                 config_file_content+=f"""
                         <weight-files value="weights_{uuid_simulation}.xml"/>"""
                     
-            config_file_content+=f"""</routing> </configuration>"""
-
-
+            config_file_content+=f"""</routing> 
+                        <processing>
+                            <ignore-route-errors value="true"/>
+                            <ignore-accidents value="true"/>
+                        </processing>
+                    </configuration>"""
+            
 
             print("Archivo de configuración SUMO creado correctamente", config_file)
             with open(config_file, 'w') as f:
@@ -886,7 +890,8 @@ async def simulationEmissions(websocket: WebSocket):
                         # "-r", route_file,
                         "-v", "true",
                         "--device.rerouting.probability", "1",
-                        "--device.rerouting.period", "60",
+                        "--device.rerouting.period", "1",
+                        "--no-warnings", "true",
                         "--ignore-route-errors", "true"
                     ], check=True,capture_output=True, text=True)
 
