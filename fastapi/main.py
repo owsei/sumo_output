@@ -707,27 +707,43 @@ async def simulationEmissions(websocket: WebSocket):
                 duarouter = os.path.join(sumo_home, "bin", "duarouter")  # sin G
 
 
-            weight_file_content=f""" <weights>"""
-            for road in banned_roads:
-                weight_file_content += f"""<edge id="{road}" traveltime="100000"/>"""
-            weight_file_content+=f""" </weights>"""
-            
-            try:
-                with open(weight_file, 'w') as f_additional:
-                    f_additional.write(weight_file_content)
-                f_additional.close()
-                print("Archivo weights.xml creado correctamente", weight_file)
-            except Exception as e:
-                f_additional.close()
-                print(f"Error al crear el archivo weights_{uuid_simulation}.xml:", e)
+            if len(banned_roads)>1:
+                weight_file_content=f""" <weights>"""
+                for road in banned_roads:
+                    weight_file_content += f"""<edge id="{road}" traveltime="100000"/>"""
+                weight_file_content+=f""" </weights>"""
+                
+                try:
+                    with open(weight_file, 'w') as f_additional:
+                        f_additional.write(weight_file_content)
+                    f_additional.close()
+                    print("Archivo weights.xml creado correctamente", weight_file)
+                except Exception as e:
+                    f_additional.close()
+                    print(f"Error al crear el archivo weights_{uuid_simulation}.xml:", e)
 
-            subprocess.run([
-                duarouter, 
-                "-n", net_file, 
-                "-r", trips_file, 
-                "-o", route_file,
-                "--weight-files", weight_file
-                ], check=True)
+            
+                subprocess.run([
+                    duarouter, 
+                    "-n", net_file, 
+                    "-r", trips_file, 
+                    "-o", route_file,
+                    "--weight-files", weight_file, 
+                    "--ignore-errors", "true",
+                    "--no-warnings", "true"
+                    ], check=True)
+
+            else:
+                subprocess.run([
+                    duarouter, 
+                    "-n", net_file, 
+                    "-r", trips_file, 
+                    "-o", route_file,
+                    "--ignore-errors", "true",
+                    "--no-warnings", "true"
+                    ], check=True)    
+
+            
             
             additional_file_content = f"""<additional>  
                                         <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" excludeEmpty="true"/>
@@ -777,61 +793,75 @@ async def simulationEmissions(websocket: WebSocket):
 
             print("Archivo additional.add.xml: ", os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"))
 
-            net = sumolib.net.readNet(net_file)
-            # Buscar todas las calles que son "entradas" (no tienen calles que entren en ellas)
-            calles_entrada = []
-            for edge in net.getEdges():
-                if len(edge.getIncoming()) == 0:
-                    calles_entrada.append(edge.getID())
-            edges_str = " ".join(calles_entrada)
+            if len(banned_roads)>1:
+                net = sumolib.net.readNet(net_file)
+                # Buscar todas las calles que son "entradas" (no tienen calles que entren en ellas)
+                calles_entrada = []
+                for edge in net.getEdges():
+                    if len(edge.getIncoming()) == 0:
+                        calles_entrada.append(edge.getID())
+                edges_str = " ".join(calles_entrada)
 
-            # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
-            additional_closedEdge_file_content =f"""<additional>
-                                <rerouter id="rerouter1" edges="{edges_str}" probability="1.0" >
-                                    <interval begin="0" end="{duration_sec}">"""
-            for road in banned_roads:
-                additional_closedEdge_file_content += f"""
-                                        <closingReroute id="{road}" disallow="all"/>"""
-            additional_closedEdge_file_content += f"""</interval>
-                                </rerouter>
-                            </additional>"""
-            
-            print("Contenido del archivo closedEdge.add.xml: ", additional_closedEdge_file_content)
-            
-            try:
-                with open(os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"), 'w') as f_additional:
-                    f_additional.write(additional_closedEdge_file_content)
-                f_additional.close()
-                print("Archivo closedEdge.add.xml creado correctamente", os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"))
-            except Exception as e:
-                f_additional.close()
-                print(f"Error al crear el archivo closedEdge_{uuid_simulation}.add.xml", e)
+                # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
+                additional_closedEdge_file_content =f"""<additional>
+                                    <rerouter id="rerouter1" edges="{edges_str}" probability="1.0" >
+                                        <interval begin="0" end="{duration_sec}">"""
+                for road in banned_roads:
+                    additional_closedEdge_file_content += f"""
+                                            <closingReroute id="{road}" disallow="all"/>"""
+                additional_closedEdge_file_content += f"""</interval>
+                                    </rerouter>
+                                </additional>"""
+                
+                print("Contenido del archivo closedEdge.add.xml: ", additional_closedEdge_file_content)
+                
+                try:
+                    with open(os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"), 'w') as f_additional:
+                        f_additional.write(additional_closedEdge_file_content)
+                    f_additional.close()
+                    print("Archivo closedEdge.add.xml creado correctamente", os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"))
+                except Exception as e:
+                    f_additional.close()
+                    print(f"Error al crear el archivo closedEdge_{uuid_simulation}.add.xml", e)
 
-            closeEdge_file = os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml")
-            closedFile=f"closedEdge_{uuid_simulation}.add.xml"
-            print("Archivos adicionales de SUMO creados correctamente")
-            
-            print("Archivo closedEdge.add.xml: ", closeEdge_file)
+                closeEdge_file = os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml")
+                closedFile=f"closedEdge_{uuid_simulation}.add.xml"
+                print("Archivos adicionales de SUMO creados correctamente")
+                
+                print("Archivo closedEdge.add.xml: ", closeEdge_file)
 
 
             # crea el archivo de configuración SUMO
             config_file = os.path.join(ruta_output, f"simulation_{uuid_simulation}.sumocfg")
 
-            print("Archivo de configuración SUMO creado correctamente", config_file)
-            with open(config_file, 'w') as f:
-                f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
+            config_file_content= f"""<?xml version="1.0" encoding="UTF-8"?>
                 <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
                     <input>
                         <net-file value="{net_file}"/>
-                        <route-files value="{route_file}"/>
-                        <additional-files value="additional_{uuid_simulation}.add.xml, closedEdge_{uuid_simulation}.add.xml"/>
-                    </input>
+                        <route-files value="{route_file}"/>"""
+            if len(banned_roads)>1:    
+                config_file_content+=f"""
+                        <additional-files value="additional_{uuid_simulation}.add.xml, closedEdge_{uuid_simulation}.add.xml"/>"""
+            else:
+                config_file_content+=f"""
+                            <additional-files value="additional_{uuid_simulation}.add.xml"/>"""
+
+            config_file_content+=f"""</input>
                     <routing>
                         <device.rerouting.probability value="1.0"/>
-                        <device.rerouting.period value="60"/>
-                        <weight-files value="weights_{uuid_simulation}.xml"/>
-                    </routing>
-                </configuration>""")
+                        <device.rerouting.period value="60"/>"""
+            
+            if len(banned_roads)>1:    
+                config_file_content+=f"""
+                        <weight-files value="weights_{uuid_simulation}.xml"/>"""
+                    
+            config_file_content+=f"""</routing> </configuration>"""
+
+
+
+            print("Archivo de configuración SUMO creado correctamente", config_file)
+            with open(config_file, 'w') as f:
+                f.write(config_file_content)    
             
             print("Archivos de configuración SUMO generados correctamente")
             print("Archivo de configuración SUMO: ", config_file)
