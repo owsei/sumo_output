@@ -1,8 +1,8 @@
-
+        
         // const endPoint= "ws://owsei.ddns.net:8001/"
         // const endPoint= "http://localhost:8000/"
         // const endPointDirecto="ws://localhost:8000/"
-        window.endPoint= "http://localhost:8001/"
+        // window.endPoint= "http://localhost:8001/"
 
         // Reemplaza con tu token de Cesium Ion
        
@@ -369,7 +369,7 @@
                 
             };
 
-            socket = new WebSocket(window.endPoint+'ws/getRoads?payload='+JSON.stringify(payload));
+            socket = new WebSocket(window.endPoint+'/ws/getRoads?payload='+JSON.stringify(payload));
             socket.onopen = () => {
                 console.log('Conectado al servidor');
                 document.getElementById('messages-websocket').innerHTML += "Conectando al servidor...";
@@ -403,7 +403,7 @@
 
         async function getRoadsPamplona(){
 
-            const socket = new WebSocket(window.endPoint+'ws/getRoadsPamplona');
+            const socket = new WebSocket(window.endPoint+'/ws/getRoadsPamplona');
             socket.onopen = () => {
                 console.log('Conectado al servidor');
             };
@@ -421,7 +421,7 @@
 
         async function getRoadsSanchoElFuerte(){
 
-            const socket = new WebSocket(window.endPoint+'ws/getRoadsSanchoElFuerte');
+            const socket = new WebSocket(window.endPoint+'/ws/getRoadsSanchoElFuerte');
             socket.onopen = () => {
                 console.log('Conectado al servidor');
             };
@@ -444,7 +444,7 @@
             const num_vehicles = document.getElementById('num_vehicles').value;
             const duration_sec = document.getElementById('duration_sec').value;
 
-            const socket2 = new WebSocket(window.endPoint+'ws/simulationEmissions?num_vehicles='+num_vehicles+'&duration_sec='+duration_sec );
+            const socket2 = new WebSocket(window.endPoint+'/ws/simulationEmissions?num_vehicles='+num_vehicles+'&duration_sec='+duration_sec );
             socket2.onopen = () => {
                 console.log('Conectado al servidor');
                 document.getElementById('messages-websocket').innerHTML += "Conectando al servidor...<br/>";
@@ -497,7 +497,7 @@
             const num_vehicles = document.getElementById('num_vehicles').value;
             const duration_sec = document.getElementById('duration_sec').value;
 
-            socket = new WebSocket(window.endPoint+'ws/simulationTraci?bbox='+JSON.stringify(payload)+"&forbiddenRoads="+forbiddenRoads+"&num_vehicles="+num_vehicles+"&duration_sec="+duration_sec+"&zonaSnachoFuerte="+window.zonaSnachoFuerte);
+            socket = new WebSocket(window.endPoint+'/ws/simulationTraci?bbox='+JSON.stringify(payload)+"&forbiddenRoads="+forbiddenRoads+"&num_vehicles="+num_vehicles+"&duration_sec="+duration_sec+"&zonaSnachoFuerte="+window.zonaSnachoFuerte);
             window.vehicles = {}; // Diccionario para rastrear entidades
             window.trafficLights = {}; // Diccionario para rastrear entidades
 
@@ -714,7 +714,7 @@
 
 
         function testConnection(){
-            socket = new WebSocket(window.endPoint + 'ws/status');
+            socket = new WebSocket(window.endPoint + '/ws/status');
             document.getElementById('messages-websocket').innerHTML += "Conectando al servidor...<br/>";
 
             socket.onopen = function(e) {

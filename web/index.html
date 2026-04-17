@@ -44,10 +44,11 @@
             <input class="form-check-input" type="checkbox" role="switch" id="toggle3DTiles">
             <label class="form-check-label" for="toggle3DTiles">3D Tiles</label>
         </div>
-        <div class="form-check form-switch">
-            <input class="form-check-input" type="checkbox" role="switch" id="zonaSnachoFuerte">
-            <label class="form-check-label" for="zonaSnachoFuerte">Zona Sancho Fuerte</label>
-        </div>
+        <label for="mapSelector" class="form-label">Seleccionar Mapa:</label>
+        <select id="mapSelector" class="form-select form-select-sm">
+            <option value="pamplona">Pamplona</option>
+            <option value="sancho">Zona Sancho El Fuerte</option>
+        </select>
         <br/>
         <text id="num_vehicles_text">Número de vehículos:</text><br/>
         <input type="number" id="num_vehicles" value=1000><br/>
@@ -130,7 +131,9 @@
         </div>
     </div>
 </div>
+    <script src="./js/env.js"></script>
     <script src="./js/sumo.js"></script>
+    <div id="map">
     <script type="module">
 
         fetch('./js/navbar.html')
@@ -261,6 +264,38 @@
             }
         });
 
+        // Map selector dropdown
+        document.getElementById('mapSelector').addEventListener('change', function () {
+            const selectedMap = this.value;
+            
+            // Limpiar entidades del mapa actual
+            window.viewer.entities.removeAll();
+            bounds = null;
+            firstPoint = null;
+            secondPoint = null;
+            firstPointPosition = null;
+            secondPointPosition = null;
+            rectangleEntity = null;
+            forbiddenRoadsArray = [];
+            window.selectedOrigin = null;
+            window.selectedDestination = null;
+            
+            // Limpiar elementos de UI
+            document.getElementById('forbiddenRoads').innerHTML = '';
+            document.getElementById('originFlow').innerHTML = 'Ninguno seleccionado';
+            document.getElementById('destinationFlow').innerHTML = 'Ninguno seleccionado';
+            
+            // Cargar el mapa seleccionado
+            if (selectedMap === 'pamplona') {
+                window.zonaSnachoFuerte = 0;
+                flyToPamplona();
+                getRoadsPamplona();
+            } else if (selectedMap === 'sancho') {
+                window.zonaSnachoFuerte = 1;
+                getRoadsSanchoElFuerte();
+            }
+        });
+
         // Zona Snacho Fuerte checkbox
         document.getElementById('zonaSnachoFuerte').addEventListener('change', function () {
             if (this.checked) {
@@ -335,7 +370,9 @@
             }
         });
 
-        flyToPamplona()
+        // Inicializar con el mapa de Pamplona
+        flyToPamplona();
+        getRoadsPamplona();
 
        
 

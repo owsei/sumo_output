@@ -34,16 +34,16 @@ import clases.sumoClass as sumoClass
 
 url_overpass = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 
-sumo_home_windows = r"C:\Proyectos\01_SUMO\sumo-1.26.0"
+sumo_home_windows = r"D:\Proyectos\01_SUMO"
 sumo_home_linux = "/usr/share/sumo"
 
-ruta_output_windows = r"c:\Proyectos\sumo_output_mia\output"
+ruta_output_windows = r"d:\Proyectos\sumo_output\output"
 ruta_output_linux = r"/tmp/output/"
 
-ruta_windows = r"c:\Proyectos\sumo_output_mia\red_carreteras"
+ruta_windows = r"d:\Proyectos\sumo_output\red_carreteras"
 ruta_linux = r"/tmp/"
 
-sumoBD=sumoClass.connectionParams("localhost", "5432", "sumo", "admin", "admin")
+sumoBD=sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin")
 
 
 app = FastAPI()
@@ -66,47 +66,6 @@ def operative_system_detect():
        ruta_output= r"D:\Proyectos\sumo_output\output"
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
-
-async def download_osm_data_overpass(bbox: sumoClass.BoundingBox, output_path: str, websocket:WebSocket):
-    """Descarga directa de Overpass API para evitar errores de osmGet.py"""
-    print("Descargando datos de OSM")
-    types_filter = "|".join(bbox.road_types)
-    print("Filtros de tipos: ", types_filter)
-    # Overpass usa el orden: south, west, north, east
-    overpass_url = url_overpass
-    # Esta query descarga solo las vías (ways) que coincidan con los tipos
-    # y también los nodos (nodes) que forman esas vías.
-    try:
-        
-        query = f"""
-        [out:xml][timeout:25];
-        (
-        way["highway"~"{types_filter}"]["access"!="private"]["motor_vehicle"!="no"]({bbox.south},{bbox.west},{bbox.north},{bbox.east});
-        (._;>;);
-        );
-        out meta;
-        """
-        headers = {
-            "User-Agent": "TrafficSim/1.0 (contacto: pmesparza@itracasa.es)"
-        }
-        print("Query de OSM: ", query)
-        response = requests.get("https://overpass.kumi.systems/api/interpreter", params={'data': query},headers=headers)
-        if response.status_code == 200:
-            with open(output_path, "w") as f:
-                f.write(response.text)
-            await websocket.send_json({"mensaje": "Fichero de carreteras guardado correctamente. "})
-        else:
-            error_msg=f"403 Forbidden: Probablemente has hecho demasiadas solicitudes a Overpass API. Intenta de nuevo más tarde. {response.status_code} {response.text}"
-            await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + error_msg})
-            
-     
-    except Exception as e:
-        f.close()
-        await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(e) })
-        await websocket.close()
-        raise HTTPException(status_code=500, detail=str(e))
-    finally:
-        f.close()
 
 async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, websocket:WebSocket):
     """Descarga directa de Overpass API para evitar errores de osmGet.py"""
@@ -641,9 +600,21 @@ async def simulationEmissions(websocket: WebSocket):
         banned_roads = []
         print("No se han cerrado carreteras para la simulación.")
 
+    map_type = websocket.query_params.get("mapType")
+    if map_type is None:
+        map_type = "pamplona"  # Valor por defecto
+    print("Tipo de mapa seleccionado: ", map_type)
 
     simulation_params = sumoClass.simulationParams(num_vehicles, duration_sec,fringe_factor, aggregation_period_sec, trip_period)
-    await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
+    
+    # Determinar el archivo de red según el tipo de mapa
+    if map_type == "sancho":
+        await websocket.send_json({"mensaje": "Iniciando simulacion de Zona Sancho El Fuerte.🚩"})
+        net_filename = "zona-sancho-el-fuerte.net.xml"
+    else:
+        await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
+        net_filename = "pamplona.net.xml"
+    
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
@@ -657,17 +628,16 @@ async def simulationEmissions(websocket: WebSocket):
 
     print("Ruta de SUMO encontrada correctamente", sumo_home,"Operative system",platform.system())
 
-    # 1. Generar tráfico aleatorio sobre una red de ejemplo (sancho el fuerte)
+    # 1. Generar tráfico aleatorio sobre una red de ejemplo
     print("Generando tráfico aleatorio")
     
     with tempfile.TemporaryDirectory() as tmpdir:
         try:
             if operativeSytemIsLinux==1:
-                net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+                net_file = os.path.join(ruta_linux, net_filename)
                 print("Archivo NET creado correctamente", net_file)
-                
             else:
-                net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+                net_file = os.path.join(ruta_windows, net_filename)
                 print("Archivo NET creado correctamente", net_file)
             
             route_file= os.path.join(ruta_output, f"pamplona_{uuid_simulation}.rou.xml")
@@ -963,7 +933,7 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
     if operativeSytemIsLinux==0:
         net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
     else:
-        net_file = r"C:\Proyectos\twin-sumo-output\red_carreteras\zona-sancho-el-fuerte.net.xml"
+        net_file = ruta_windows + r"\zona-sancho-el-fuerte.net.xml"
 
     await websocket.send_json({"mensaje": "Iniciando descarga de red de Sancho el fuerte."})
     try:
@@ -995,6 +965,51 @@ def getPamplonaStreets():
 
     net = sumolib.net.readNet(net_file)
     # 1. Leer el parquet (ajusta la ruta a tu archivo)    # 4. Crear el JSON final con geometría y datos de tráfico
+    features = []
+    for edge in net.getEdges():
+        tipo=edge.getType()
+        if edge.getType() not in road_types:
+            continue
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge.getID(),
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+        
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": properties
+        }
+        features.append(feature)
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
+@app.get("/getSanchoStreets")
+def getSanchoStreets():
+    
+    road_types = ["highway.motorway", "highway.motorway_link","highway.motorway_junction", "highway.primary", "highway.secondary", "highway.tertiary", "highway.residential", "highway.living_street","highway.trunk","highway.trunk_link", "highway.primary_link", "highway.secondary_link", "highway.tertiary_link","highway.service","highway.trafficlight"]
+    operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
+    if operativeSytemIsLinux==1:
+       ruta_output= ruta_output_linux
+       net_file = os.path.join(ruta_linux, "zona-sancho-el-fuerte.net.xml")
+    else:
+       ruta_output= ruta_output_windows
+       net_file = os.path.join(ruta_windows, "zona-sancho-el-fuerte.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    # Crear el JSON final con geometría y datos de tráfico
     features = []
     for edge in net.getEdges():
         tipo=edge.getType()
@@ -1373,9 +1388,7 @@ async def websocket_simulation(websocket: WebSocket):
                 "--geometry.remove", "true",
                 "--proj.utm", "true",
                 "--keep-edges.by-type", sumo_types, # <--- Mantiene solo estos tipos
-                "--remove-edges.isolated", "true",
-                "--tls.guess","true",
-                "--tls.join", "true"
+                "--remove-edges.isolated", "true"
             ], check=True)
 
         print("Red generada correctamente")
@@ -1389,25 +1402,26 @@ async def websocket_simulation(websocket: WebSocket):
         print("Periodo: ", period)
         await websocket.send_json({"mensaje":"Periodo de aparicion de vehiculos: "+ str(period)})
     
-        random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
-        if operativeSytemIsLinux==0:
-            procesoTraffic=subprocess.run([
-                "python3", random_trips,
-                "-n", net_file,
-                "-r", route_file,
-                "-e", str(duration_sec),  # Simular 3600 segundos de tráfico
-                "--period", str(period), # Aparece un coche cada 0.5 segundos
-                "--fringe-factor", "10"
-            ], check=True)  
-        else:
-            procesoTraffic=subprocess.run([
-                "python", random_trips,
-                "-n", net_file,
-                "-r", route_file,
-                "-e", str(duration_sec),  # Simular 3600 segundos de tráfico
-                "--period", str(period), # Aparece un coche cada 0.5 segundos
-                "--fringe-factor", "10"
-            ], check=True)  
+        if zonaSnachoFuerte==0:
+            random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
+            if operativeSytemIsLinux==0:
+                procesoTraffic=subprocess.run([
+                    "python3", random_trips,
+                    "-n", net_file,
+                    "-r", route_file,
+                    "-e", str(duration_sec),  # Simular 3600 segundos de tráfico
+                    "--period", str(period), # Aparece un coche cada 0.5 segundos
+                    "--fringe-factor", "10"
+                ], check=True)  
+            else:
+                procesoTraffic=subprocess.run([
+                    "python", random_trips,
+                    "-n", net_file,
+                    "-r", route_file,
+                    "-e", str(duration_sec),  # Simular 3600 segundos de tráfico
+                    "--period", str(period), # Aparece un coche cada 0.5 segundos
+                    "--fringe-factor", "10"
+                ], check=True)  
 
             print("Tráfico generado correctamente para "+ str(num_vehicles) + " vehiculos") 
             await websocket.send_json({"mensaje":"Tráfico generado correctamente para "+ str(num_vehicles) + " vehiculos"})
@@ -1416,42 +1430,37 @@ async def websocket_simulation(websocket: WebSocket):
             print("Creando archivo de configuración SUMO")
             await websocket.send_json({"mensaje":"Creando archivo de configuración SUMO"})
             
-            if operativeSytemIsLinux==0:
-                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
-            else:
-                config_file = os.path.join(tmpdir, "simulation.sumocfg")
+        if operativeSytemIsLinux==0:
+            config_file = os.path.join(ruta_linux, "simulation.sumocfg")
+        else:
+            config_file = os.path.join(ruta_output_windows, "simulation.sumocfg")
 
-            print("Archivo de configuración SUMO creado correctamente", config_file)
-            await websocket.send_json({"mensaje":f"Archivo de configuración SUMO creado correctamente {config_file}"})
-            
-            # Crear el archivo .sumocfg
-            with open(config_file, 'w') as f:
-                f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
-                    <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
-                        <input>
-                            <net-file value="{net_file}"/>
-                            <route-files value="{route_file}"/>
-                        </input>
-                        <time>
-                            <begin value="0"/>
-                            <end value="{str(duration_sec)}"/>
-                        </time>
-                        <output>
-                            <tripinfo-output value="tripinfos.xml"/>
-                        </output>
-                        <routing>
-                            <device.rerouting.probability value="1.0"/>
-                            <device.rerouting.period value="10"/>
-                        </routing>
-                    </configuration>""")
+        print("Archivo de configuración SUMO creado correctamente", config_file)
+        await websocket.send_json({"mensaje":f"Archivo de configuración SUMO creado correctamente {config_file}"})
+        
+        # Crear el archivo .sumocfg
+        with open(config_file, 'w') as f:
+            f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
+                <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
+                    <input>
+                        <net-file value="{net_file}"/>
+                        <route-files value="{route_file}"/>
+                    </input>
+                    <time>
+                        <begin value="0"/>
+                        <end value="{str(duration_sec)}"/>
+                    </time>
+                    <output>
+                        <tripinfo-output value="tripinfos.xml"/>
+                    </output>
+                    <routing>
+                        <device.rerouting.probability value="1.0"/>
+                        <device.rerouting.period value="10"/>
+                    </routing>
+                </configuration>""")
 
-            print("Archivo de configuración SUMO generados correctamente")
+        print("Archivo de configuración SUMO generados correctamente")
 
-        if zonaSnachoFuerte==1:
-            if operativeSytemIsLinux==1:
-                config_file = os.path.join(ruta_linux, "simulation.sumocfg")
-            else:
-                config_file = os.path.join(tmpdir, "simulation.sumocfg")
         # 4. Iniciar simulación con TraCI
         try:
             if operativeSytemIsLinux==0:
@@ -1717,7 +1726,7 @@ async def get_roads_websocket(websocket: WebSocket):
         try:
             # 1. Descarga (usando el método de requests que vimos antes)
             print("Descargando datos de OSM")
-            await download_osm_data_overpass(payload, osm_file, websocket)
+            await download_osm_data(payload, osm_file, websocket)
             print("Datos de OSM descargados correctamente")
 
             sumo_types = ",".join([f"highway.{t}" for t in payload.road_types])

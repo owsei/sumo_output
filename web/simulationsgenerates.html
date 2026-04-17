@@ -41,7 +41,7 @@
             border: 1px solid #000; 
         }
     </style>
-
+    
 </head>
 <body>
     <div id="navbar-container"></div>
@@ -88,10 +88,12 @@
             </div>
         </div>
     </main>
-
+    <script src="./js/env.js"></script>
     <script>
 
-        window.endPoint = 'http://localhost:8001';
+        setTimeout(() => {
+            loadSimulations();
+        }, 1000);
 
         fetch('./js/navbar.html')
         .then(response => response.text())
@@ -149,5 +151,6 @@
         loadSimulations();
         
     </script>
+    
 </body>
 </html>
