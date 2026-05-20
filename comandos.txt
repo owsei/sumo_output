@@ -1,0 +1,5 @@
+
+
+C:\Proyectos\01_SUMO\sumo-1.26.0\bin\duarouter -n C:\Proyectos\twin-sumo-output\red_carreteras\pamplona.net.xml -r C:\Proyectos\twin-sumo-output\output\trips_36be5236.trip.xml -o C:\Proyectos\twin-sumo-output\output\pamplona_36be5236.rou.xml --weight-files C:\Proyectos\twin-sumo-output\output\weights_36be5236.xml
+
+C:\Proyectos\01_SUMO\sumo-1.26.0\bin\sumo-gui -c simulation_d5d6acc3.sumocfg --ignore-route-errors

@@ -127,11 +127,12 @@
 
 
 
-<!-- <script src="./js/sumo.js"></script> -->
+<script src="./js/sumo.js"></script>
 <div id="map"></div>
-<script src="./js/env.js"></script>
+
 <script>
 
+    window.endPoint = 'http://localhost:8001';
      fetch('./js/navbar.html')
     .then(response => response.text())
     .then(data => {
@@ -140,7 +141,6 @@
 
 
     // Configurar endpoint
-    window.endPoint = 'http://sumo-traffic.ddns.net:8001';
 
     let isPaused = false;
     const btn = document.getElementById('play-pause-btn');

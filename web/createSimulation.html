@@ -41,7 +41,7 @@
             border: 1px solid #000; 
         }
     </style>
-    
+
 </head>
 <body>
     <div id="navbar-container"></div>
@@ -120,16 +120,20 @@
         <div class="row mt-4">
             <div class="col-9">
                 <div class="card shadow-sm">
-                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
-                        <strong><i class="bi bi-map me-2"></i>Mapa</strong>
-                        <div style="width: 200px;">
-                            <select id="mapSelector" class="form-select form-select-sm">
-                                <option value="pamplona">Pamplona</option>
-                                <option value="sancho">Zona Sancho El Fuerte</option>
-                            </select>
-                        </div>
+                    <div class="card-header bg-dark text-white">
+                        <strong><i class="bi bi-map me-2"></i>Mapa de Pamplona</strong>
                     </div>
                     <div class="card-body p-0">
+                        <div class="p-2 d-flex gap-2 align-items-center">
+                            <label for="areaSelect" class="mb-0">Área:</label>
+                            <select id="areaSelect" class="form-select form-select-sm" style="width:220px">
+                                <option value="pamplona" selected>Pamplona</option>
+                                <option value="sancho">Zona - Sancho El Fuerte</option>
+                                <option value="navarra">Navarra</option>
+                            </select>
+                            <button id="loadStreetsBtn" class="btn btn-sm btn-outline-primary">Cargar calles</button>
+                            <div id="mapLoadStatus" class="text-muted small ms-2">Listo</div>
+                        </div>
                         <div id="map"></div>
                     </div>
                 </div>
@@ -151,8 +155,10 @@
     </main>
 
     
-    <script type="module" src="./js/env.js"></script>
+    <!-- <script src="./js/sumo.js"></script> -->
     <script>
+
+        window.endPoint = 'http://localhost:8001';
 
         fetch('./js/navbar.html')
         .then(response => response.text())
@@ -235,8 +241,7 @@
                 aggregation_period_sec: document.getElementById('aggregation_period_sec').value,
                 output_factor: document.getElementById('output_factor').value,
                 trip_period_sec: tripPeriodInput.value,
-                bannedStreets: Array.from(bannedStreets).join(','), // Convertimos el Set a un string separado por comas
-                mapType: currentMap // Agregar tipo de mapa
+                bannedStreets: Array.from(bannedStreets).join(',') // Convertimos el Set a un string separado por comas
             });
 
             const wsUrl = `${apiBase.replace('http://', 'ws://').replace('https://', 'wss://')}ws/simulationEmissions?${params.toString()}`;
@@ -296,59 +301,36 @@
             }));
 
             map.on('load', async () => {
-                await loadStreetData('pamplona');
-                attachMapListeners();
-            });
-            
-            let center = [ -1.649963,42.810935];
-            let zoom = 14;
-            window.map.flyTo({
-                center: center,
-                zoom: zoom,
-                duration: 1000
-            });
-        }
-
-        async function loadStreetData(mapType) {
-            try {
-                let endpoint = window.endPoint + '/getPamplonaStreets';
-                if (mapType === 'sancho') {
-                    endpoint = window.endPoint + '/getSanchoStreets';
-                }
-                
-                const responseStreets = await fetch(endpoint);
-                const streetsData = await responseStreets.json();
-                
-                window.map.addSource('streets-source', {
+                // Añadimos fuente y capa vacía que actualizaremos al cargar calles
+                map.addSource('streets-source', {
                     type: 'geojson',
-                    data: streetsData
+                    data: { type: 'FeatureCollection', features: [] }
                 });
-                
-                window.map.addLayer({
+                map.addLayer({
                     id: 'capa-streets',
                     type: 'line',
                     source: 'streets-source',
                     paint: {
                         'line-width': 4,
-                        'line-color': '#2690D1'
+                        // color rojo si la propiedad 'banned' es true, sino color por defecto
+                        'line-color': ['case', ['==', ['get', 'banned'], true], '#ff0000', '#2690D1']
                     }
                 });
-            } catch (error) {
-                console.error('Error cargando las calles:', error);
-                addLog('Error al cargar las calles del mapa.', true);
-            }
-        }
 
-        function attachMapListeners() {
-            window.map.on("mouseenter", "capa-streets", () => {
+                // Cargar la selección por defecto
+                const area = document.getElementById('areaSelect').value || 'pamplona';
+                loadStreets(area);
+            });
+
+            map.on("mouseenter", "capa-streets", () => {
                 window.map.getCanvas().style.cursor = "pointer";
             });
 
-            window.map.on("mouseleave", "capa-streets", () => {
+            map.on("mouseleave", "capa-streets", () => {
                 window.map.getCanvas().style.cursor = "";
             });
 
-            window.map.on("click", "capa-streets", event => {
+            map.on("click", "capa-streets", event => {
                 const feature = event.features && event.features[0];
                 if (!feature) {
                     return;
@@ -370,99 +352,170 @@
             });
         }
 
+        async function loadStreets(area) {
+            const statusEl = document.getElementById('mapLoadStatus');
+            statusEl.textContent = 'Cargando...';
+
+            // Clear current source
+            if (window.map && window.map.getSource('streets-source')) {
+                window.map.getSource('streets-source').setData({ type: 'FeatureCollection', features: [] });
+            }
+
+            if (area === 'pamplona') {
+                try {
+                    const responseStreets = await fetch(window.endPoint + '/getPamplonaStreets');
+                    const streetsData = await responseStreets.json();
+                        if (window.map && window.map.getSource('streets-source')) {
+                            // Guardar copia local para modificaciones (p.e. marcar prohibidas)
+                            window.currentStreetsGeoJSON = streetsData;
+                            window.map.getSource('streets-source').setData(streetsData);
+                        }
+                    statusEl.textContent = 'Calles de Pamplona cargadas';
+                } catch (e) {
+                    console.error(e);
+                    statusEl.textContent = 'Error cargando Pamplona';
+                }
+            } else if (area === 'sancho') {
+                // Usar WebSocket para solicitar la conversión de la red y recibir features
+                const features = [];
+                try {
+                    const wsUrl = (window.endPoint.replace(/^http/, 'ws').replace(/^https/, 'wss')) + '/ws/getRoadsSanchoElFuerte';
+                    const ws = new WebSocket(wsUrl);
+                    ws.onopen = () => {
+                        statusEl.textContent = 'Solicitando calles (Sancho El Fuerte)...';
+                    };
+                    ws.onmessage = (evt) => {
+                        try {
+                            const data = JSON.parse(evt.data);
+                            if (data.mensaje) {
+                                console.log('WS msg:', data.mensaje);
+                                return;
+                            }
+                            if (data.type === 'Feature' || data.type === 'feature') {
+                                // Aceptar la feature y añadirla si es LineString
+                                const f = data;
+                                if (f.geometry && f.geometry.type && f.geometry.type.toLowerCase().includes('linestring')) {
+                                    features.push(f);
+                                }
+                            }
+                        } catch (err) {
+                            console.error('Error parsing WS message', err);
+                        }
+                    };
+                    ws.onerror = (err) => {
+                        console.error('WebSocket error', err);
+                        statusEl.textContent = 'Error WebSocket Sancho';
+                    };
+                    ws.onclose = () => {
+                        const fc = { type: 'FeatureCollection', features };
+                        if (window.map && window.map.getSource('streets-source')) {
+                            window.currentStreetsGeoJSON = fc;
+                            window.map.getSource('streets-source').setData(fc);
+                        }
+                        statusEl.textContent = `Calles de Sancho cargadas (${features.length})`;
+                    };
+                } catch (e) {
+                    console.error(e);
+                    statusEl.textContent = 'Error iniciando WS Sancho';
+                }
+            }
+            else if (area === 'navarra') {
+                try {
+                    const responseStreets = await fetch(window.endPoint + '/getNavarraRoads');
+                    const streetsData = await responseStreets.json();
+                        if (window.map && window.map.getSource('streets-source')) {
+                            // Guardar copia local para modificaciones (p.e. marcar prohibidas)
+                            window.currentStreetsGeoJSON = streetsData;
+                            window.map.getSource('streets-source').setData(streetsData);
+                        }
+                    statusEl.textContent = 'Calles de Navarra cargadas';
+                } catch (e) {
+                    console.error(e);
+                    statusEl.textContent = 'Error cargando Navarra';
+                }
+            } else {
+                statusEl.textContent = 'Área desconocida';
+            }
+        }
+
         bannedStreets = new Set();
 
-        // Variable global para rastrear el mapa actual
-        let currentMap = 'pamplona';
-
         function prohibirStreet(id) {
-            // Aquí puedes agregar la lógica para enviar esta información al backend o actualizar el estado de la calle
             console.log("Prohibiendo calle con ID: ", id);
+            if (!bannedStreets) bannedStreets = new Set();
+            if (bannedStreets.has(id)) return; // ya prohibida
             bannedStreets.add(id);
-            const listItem = document.createElement('li');
-            listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
-            listItem.id = `banned-street-${id}`;
-            
-            const streetLabel = document.createElement('span');
-            streetLabel.textContent = `Calle ID: ${id}`;
-            
-            const badgeContainer = document.createElement('div');
-            badgeContainer.className = 'd-flex gap-2 align-items-center';
-            
-            const badge = document.createElement('span');
-            badge.className = 'badge text-bg-danger';
-            badge.textContent = 'Prohibida';
-            
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'btn btn-sm btn-outline-danger';
-            deleteBtn.textContent = 'Eliminar';
-            deleteBtn.onclick = (e) => {
-                e.stopPropagation();
-                eliminarStreet(id);
-            };
-            
-            badgeContainer.appendChild(badge);
-            badgeContainer.appendChild(deleteBtn);
-            
-            listItem.appendChild(streetLabel);
-            listItem.appendChild(badgeContainer);
-            
-            document.getElementById('bannedStreetsList').appendChild(listItem);
-        }
 
-        function eliminarStreet(id) {
-            console.log("Eliminando calle prohibida con ID: ", id);
-            bannedStreets.delete(id);
-            const listItem = document.getElementById(`banned-street-${id}`);
-            if (listItem) {
-                listItem.remove();
-            }
-        }
-
-        // Event listener para el selector de mapas
-        document.getElementById('mapSelector').addEventListener('change', async (event) => {
-            currentMap = event.target.value;
-            
-            // Limpiar capas y fuentes anteriores
-            if (window.map.getLayer('capa-streets')) {
-                window.map.removeLayer('capa-streets');
-            }
-            if (window.map.getSource('streets-source')) {
-                window.map.removeSource('streets-source');
-            }
-            
-            // Limpiar lista de calles prohibidas
-            bannedStreets.clear();
-            document.getElementById('bannedStreetsList').innerHTML = '';
-            
-            // Determinar el endpoint según el mapa seleccionado
-            let center = [ -1.649963,42.810935];
-            let zoom = 12;
-            
-            if (currentMap === 'sancho') {
-                center = [-1.651330, 42.808587]; // Ajusta las coordenadas según la zona de Sancho
-                zoom = 14;
-            }
-            
-            // Cargar nuevas calles
-            try {
-                await loadStreetData(currentMap);
-                attachMapListeners();
-                
-                // Centrar el mapa
-                window.map.flyTo({
-                    center: center,
-                    zoom: zoom,
-                    duration: 1000
+            // Actualizar propiedades en la GeoJSON local y refrescar la fuente
+            if (window.currentStreetsGeoJSON && Array.isArray(window.currentStreetsGeoJSON.features)) {
+                window.currentStreetsGeoJSON.features.forEach(f => {
+                    if (f.properties && String(f.properties.id) === String(id)) {
+                        f.properties.banned = true;
+                    }
                 });
-                
-            } catch (error) {
-                console.error('Error cargando las calles:', error);
-                addLog('Error al cargar las calles del mapa seleccionado.', true);
+                if (window.map && window.map.getSource('streets-source')) {
+                    window.map.getSource('streets-source').setData(window.currentStreetsGeoJSON);
+                }
             }
-        });
+
+            updateBannedList();
+        }
+
+        function enableStreet(id) {
+            console.log("Habilitando calle con ID:", id);
+            if (!bannedStreets) return;
+            bannedStreets.delete(id);
+
+            if (window.currentStreetsGeoJSON && Array.isArray(window.currentStreetsGeoJSON.features)) {
+                window.currentStreetsGeoJSON.features.forEach(f => {
+                    if (f.properties && String(f.properties.id) === String(id)) {
+                        delete f.properties.banned;
+                    }
+                });
+                if (window.map && window.map.getSource('streets-source')) {
+                    window.map.getSource('streets-source').setData(window.currentStreetsGeoJSON);
+                }
+            }
+
+            updateBannedList();
+        }
+
+        function updateBannedList() {
+            const list = document.getElementById('bannedStreetsList');
+            list.innerHTML = '';
+            if (!bannedStreets || bannedStreets.size === 0) return;
+            Array.from(bannedStreets).forEach(id => {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item d-flex justify-content-between align-items-center';
+                listItem.textContent = `Calle ID: ${id}`;
+                const btns = document.createElement('div');
+                const badge = document.createElement('span');
+                badge.className = 'badge text-bg-danger me-2';
+                badge.textContent = 'Prohibida';
+                const enableBtn = document.createElement('button');
+                enableBtn.className = 'btn btn-sm btn-outline-primary';
+                enableBtn.textContent = 'Habilitar';
+                enableBtn.addEventListener('click', () => enableStreet(id));
+                btns.appendChild(badge);
+                btns.appendChild(enableBtn);
+                listItem.appendChild(btns);
+                list.appendChild(listItem);
+            });
+        }
 
         loadMap();
+
+        // Listeners para el selector de área y el botón de carga
+        document.getElementById('areaSelect').addEventListener('change', (e) => {
+            const area = e.target.value;
+            // Cargar inmediatamente al cambiar
+            if (window.map) loadStreets(area);
+        });
+
+        document.getElementById('loadStreetsBtn').addEventListener('click', () => {
+            const area = document.getElementById('areaSelect').value;
+            if (window.map) loadStreets(area);
+        });
 
 
     </script>

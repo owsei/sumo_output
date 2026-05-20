@@ -184,12 +184,10 @@ def simulation_to_postgres(ruta_file_emissions,ruta_file_traffic, connection_par
         conn.close()
         print(f"Error al cargar datos de la simulación: {e} ")
 
-
 # ******************FIN FUNCIONES DE PARSEO DE LOS RESULTADOS DE EMISIONES DE SUMO**********************#
 # RUTA PARA EJECUTAR LA SIMULACION DE SUMO Y OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES
 @app.websocket("/ws/simulationEmissions")
 async def simulationEmissions(websocket: WebSocket):
-    # OBTENGO LOS PARAMETROS DE LA SIMULACION DESDE LOS QUERY PARAMS DEL WEBSOCKET, SI NO SE PASAN SE USAN VALORES POR DEFECTO
     await websocket.accept()
     uuid_simulation = str(uuid.uuid4())[:8]
 
@@ -212,9 +210,17 @@ async def simulationEmissions(websocket: WebSocket):
     if aggregation_period_sec is None:
         aggregation_period_sec = 10  # Valor por defecto
 
+    banned_roads = websocket.query_params.get("bannedStreets")
+    if banned_roads is not None:
+        banned_roads = unquote(banned_roads).split(",")
+        print("Carreteras a cerrar durante la simulación: ", banned_roads)
+    else:
+        banned_roads = []
+        print("No se han cerrado carreteras para la simulación.")
+
+
     simulation_params = sumoClass.simulationParams(num_vehicles, duration_sec,fringe_factor, aggregation_period_sec, trip_period)
     await websocket.send_json({"mensaje": "Iniciando simulacion de Pamplona.🚩"})
-    
     # DETERMINA EL SISTEMA OPERATIVO SOBRE EL QUE SE EJECUTA LA APLICACION
     operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
     if operativeSytemIsLinux==1:
@@ -231,188 +237,288 @@ async def simulationEmissions(websocket: WebSocket):
     # 1. Generar tráfico aleatorio sobre una red de ejemplo (sancho el fuerte)
     print("Generando tráfico aleatorio")
     
-    with tempfile.TemporaryDirectory() as tmpdir:
+    try:
+        if operativeSytemIsLinux==1:
+            net_file = os.path.join(ruta_linux, "pamplona.net.xml")
+            print("Archivo NET creado correctamente", net_file)
+            
+        else:
+            net_file = os.path.join(ruta_windows, "pamplona.net.xml")
+            print("Archivo NET creado correctamente", net_file)
+        
+        route_file= os.path.join(ruta_output, f"pamplona_{uuid_simulation}.rou.xml")
+        print("Archivo ROUT creado correctamente", route_file)
+        trips_file= os.path.join(ruta_output, f"trips_{uuid_simulation}.trip.xml")
+        print("Archivo ROUT creado correctamente", trips_file)
+        weight_file= os.path.join(ruta_output, f"weights_{uuid_simulation}.xml")
+        print("Archivo weights.xml creado correctamente", weight_file)
+
+        banned_roads_str= ", ".join(banned_roads)
+
+        random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
+        if operativeSytemIsLinux==1:
+            subprocess.run([
+                "python3", random_trips,
+                "-n", net_file,
+                # "-r", route_file,
+                "-o", trips_file,
+                "-e", duration_sec,  # Simular duration_sec segundos de tráfico
+                "--period", trip_period, # Aparece un coche cada trip_period segundos
+                "--fringe-factor", fringe_factor
+            ], check=True)  
+        else:
+            subprocess.run([
+                "python", random_trips,
+                "-n", net_file,
+                # "-r", route_file,
+                "-o", trips_file,
+                "-e", duration_sec,  # Simular duration_sec segundos de tráfico
+                "--period", trip_period, # Aparece un coche cada trip_period segundos
+                "--fringe-factor", fringe_factor
+            ], check=True)  
+
+        if operativeSytemIsLinux==1:
+            duarouter = os.path.join(sumo_home, "bin", "duarouter")
+        else:
+            duarouter = os.path.join(sumo_home, "bin", "duarouter")  # sin G
+
+
+        if len(banned_roads)>1:
+            weight_file_content=f""" <weights>"""
+            for road in banned_roads:
+                weight_file_content += f"""<edge id="{road}" traveltime="100000"/>"""
+            weight_file_content+=f""" </weights>"""
+            
+            try:
+                with open(weight_file, 'w') as f_additional:
+                    f_additional.write(weight_file_content)
+                f_additional.close()
+                print("Archivo weights.xml creado correctamente", weight_file)
+            except Exception as e:
+                f_additional.close()
+                print(f"Error al crear el archivo weights_{uuid_simulation}.xml:", e)
+
+        
+            subprocess.run([
+                duarouter, 
+                "-n", net_file, 
+                "-r", trips_file, 
+                "-o", route_file,
+                "--weight-files", weight_file, 
+                "--ignore-errors", "true",
+                "--no-warnings", "true"
+                ], check=True)
+
+        else:
+            subprocess.run([
+                duarouter, 
+                "-n", net_file, 
+                "-r", trips_file, 
+                "-o", route_file,
+                "--ignore-errors", "true",
+                "--no-warnings", "true"
+                ], check=True)    
+
+        
+        
+        additional_file_content = f"""<additional>  
+                                    <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" excludeEmpty="true"/>
+                                    <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")}" excludeEmpty="true"/>
+                                    <vType id="turismo" 
+                                        vClass="passenger" 
+                                        accel="2.6" 
+                                        decel="4.5" 
+                                        sigma="0.5" 
+                                        length="5.0" 
+                                        minGap="2.5" 
+                                        maxSpeed="33.33" 
+                                        color="white"
+                                        emissionClass="HBEFA3/PC_G_EU4"/>
+                                    
+                                    <vType id="bus" 
+                                        vClass="bus" 
+                                        accel="1.5" 
+                                        decel="4.0" 
+                                        sigma="0.5" 
+                                        length="12.0" 
+                                        minGap="3.0" 
+                                        maxSpeed="15.0" 
+                                        color="orange"
+                                        emissionClass="HBEFA4/PC_petrol_Euro-4"/>
+
+                                    <vType id="camion" 
+                                        vClass="truck" 
+                                        accel="1.5" 
+                                        decel="4.0" 
+                                        sigma="0.5" 
+                                        length="12.0" 
+                                        minGap="3.0" 
+                                        maxSpeed="15.0" 
+                                        color="orange"
+                                        emissionClass="HBEFA4/PC_diesel_Euro-4"/>
+                                </additional>"""
+        
         try:
+            with open(os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"), 'w') as f_additional:
+                f_additional.write(additional_file_content)
+            f_additional.close()
+            print("Archivo additional.add.xml creado correctamente", os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"))
+        except Exception as e:
+            f_additional.close()
+            print("Error al crear el archivo additional.add.xml:", e)
+
+        print("Archivo additional.add.xml: ", os.path.join(ruta_output, f"additional_{uuid_simulation}.add.xml"))
+
+        if len(banned_roads)>1:
+            net = sumolib.net.readNet(net_file)
+            # Buscar todas las calles que son "entradas" (no tienen calles que entren en ellas)
+            calles_entrada = []
+            for edge in net.getEdges():
+                if len(edge.getIncoming()) == 0:
+                    calles_entrada.append(edge.getID())
+            edges_str = " ".join(calles_entrada)
+
+            # CIERRE DE CALLE ANTES DEL CORTE, PARA PROBAR EL REROUTING DE LOS VEHICULOS EN LA SIMULACION
+            additional_closedEdge_file_content =f"""<additional>
+                                <rerouter id="rerouter1" edges="{edges_str}" probability="1.0" >
+                                    <interval begin="0" end="{duration_sec}">"""
+            for road in banned_roads:
+                additional_closedEdge_file_content += f"""
+                                        <closingReroute id="{road}" disallow="all"/>"""
+            additional_closedEdge_file_content += f"""</interval>
+                                </rerouter>
+                            </additional>"""
             
-            # OBTENGO LA RED DE PAMPLONA EN FORMATO NET.XML, SI YA LA TENGO GENERADA EN LA RUTA DE ENTRADA DE SUMO, LA USO DIRECTAMENTE, 
-            if operativeSytemIsLinux==1:
-                net_file = os.path.join(ruta_linux, "pamplona.net.xml")
-                print("Archivo NET creado correctamente", net_file)
-            else:
-                net_file = os.path.join(ruta_windows, "pamplona.net.xml")
-                print("Archivo NET creado correctamente", net_file)
-            
-            route_file= os.path.join(tmpdir, f"mapa_{uuid_simulation}.rou.xml")
-            print("Archivo ROUT creado correctamente", route_file)
-
-
-            # CREO LAS RUTAS ALEATORIAS PARA LA SIMULACION DE SUMO, USANDO EL SCRIPT randomTrips.py QUE VIENE CON SUMO, LE PASO LA RED DE PAMPLONA 
-            # Y LOS PARAMETROS DE LA SIMULACION
-            random_trips = os.path.join(sumo_home, "tools", "randomTrips.py")
-            if operativeSytemIsLinux==1:
-                subprocess.run([
-                    "python3", random_trips,
-                    "-n", net_file,
-                    "-r", route_file,
-                    "-e", duration_sec,  # Simular duration_sec segundos de tráfico
-                    "--period", trip_period, # Aparece un coche cada trip_period segundos
-                    "--fringe-factor", fringe_factor
-                ], check=True)  
-            else:
-                subprocess.run([
-                    "python", random_trips,
-                    "-n", net_file,
-                    "-r", route_file,
-                    "-e", duration_sec,  # Simular duration_sec segundos de tráfico
-                    "--period", trip_period, # Aparece un coche cada trip_period segundos
-                    "--fringe-factor", fringe_factor
-                ], check=True)  
-
-            # CREO EL FICHERO ADDITIONAL DE SUMO PARA OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES, 
-            # ASI COMO PARA DEFINIR LOS TIPOS DE VEHICULOS QUE VOY A USAR EN LA SIMULACION
-            additional_output_file_content = f"""<additional>  
-                                        <edgeData id="edgeEmissions" type="emissions" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")}" excludeEmpty="true"/>
-                                        <edgeData id="edgeTraffic" freq="{aggregation_period_sec}" file="{os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")}" excludeEmpty="true"/>
-                                        <vType id="turismo" 
-                                            vClass="passenger" 
-                                            accel="2.6" 
-                                            decel="4.5" 
-                                            sigma="0.5" 
-                                            length="5.0" 
-                                            minGap="2.5" 
-                                            maxSpeed="33.33" 
-                                            color="white"
-                                            emissionClass="HBEFA3/PC_G_EU4"/>
-                                        
-                                        <vType id="bus" 
-                                            vClass="bus" 
-                                            accel="1.5" 
-                                            decel="4.0" 
-                                            sigma="0.5" 
-                                            length="12.0" 
-                                            minGap="3.0" 
-                                            maxSpeed="15.0" 
-                                            color="orange"
-                                            emissionClass="HBEFA4/PC_petrol_Euro-4"/>
-
-                                        <vType id="camion" 
-                                            vClass="truck" 
-                                            accel="1.5" 
-                                            decel="4.0" 
-                                            sigma="0.5" 
-                                            length="12.0" 
-                                            minGap="3.0" 
-                                            maxSpeed="15.0" 
-                                            color="orange"
-                                            emissionClass="HBEFA4/PC_diesel_Euro-4"/>
-                                    </additional>"""
+            print("Contenido del archivo closedEdge.add.xml: ", additional_closedEdge_file_content)
             
             try:
-                with open(os.path.join(ruta, "output.add.xml"), 'w') as f_additional:
-                    f_additional.write(additional_output_file_content)
+                with open(os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"), 'w') as f_additional:
+                    f_additional.write(additional_closedEdge_file_content)
                 f_additional.close()
-                print("Archivo output.add.xml creado correctamente", os.path.join(ruta, "output.add.xml"))
+                print("Archivo closedEdge.add.xml creado correctamente", os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml"))
             except Exception as e:
                 f_additional.close()
-                print("Error al crear el archivo output.add.xml:", e)
+                print(f"Error al crear el archivo closedEdge_{uuid_simulation}.add.xml", e)
 
-            # FIN DE LA CREACION DE LOS ARCHIVOS ADICIONALES PARA LA SIMULACION DE SUMO
-
-
-            # GENERO EL ARCHIVO DE CONFIGURACION DE SUMO, DONDE LE DIGO A SUMO QUE USE LA RED DE PAMPLONA, LAS RUTAS ALEATORIAS QUE HE GENERADO, 
-            # Y LOS ARCHIVOS ADICIONALES PARA OBTENER LOS RESULTADOS DE EMISIONES Y TRAFICO EN CALLES Y CARRILES
-            if operativeSytemIsLinux==1:
-                config_file = os.path.join(ruta_linux, f"simulation_{uuid_simulation}.sumocfg")
-            else:
-                config_file = os.path.join(ruta_windows, f"simulation_{uuid_simulation}.sumocfg")
-                route_file = os.path.join(tmpdir, f"mapa_{uuid_simulation}.rou.xml")
-
-            print("Archivo de configuración SUMO creado correctamente", config_file)
-            with open(config_file, 'w') as f:
-                f.write(f"""<?xml version="1.0" encoding="UTF-8"?>
-                <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
-                    <input>
-                        <net-file value="{net_file}"/>
-                        <route-files value="{route_file}"/>
-                        <additional-files value="output.add.xml closedEdge.add.xml"/>
-                    </input>
-                    <routing>
-                        <device.rerouting.probability value="1.0"/>
-                        <device.rerouting.period value="0"/>
-                    </routing>
-                </configuration>""")
+            closeEdge_file = os.path.join(ruta_output, f"closedEdge_{uuid_simulation}.add.xml")
+            closedFile=f"closedEdge_{uuid_simulation}.add.xml"
+            print("Archivos adicionales de SUMO creados correctamente")
             
-            print("Archivos de configuración SUMO generados correctamente")
+            print("Archivo closedEdge.add.xml: ", closeEdge_file)
 
-            if operativeSytemIsLinux==1:
-                sumo = "sumo"
-            else:
-                sumo = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
+
+        # crea el archivo de configuración SUMO
+        config_file = os.path.join(ruta_output, f"simulation_{uuid_simulation}.sumocfg")
+
+        config_file_content= f"""<?xml version="1.0" encoding="UTF-8"?>
+            <configuration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.xsd">
+                <input>
+                    <net-file value="{net_file}"/>
+                    <route-files value="{route_file}"/>"""
+        if len(banned_roads)>1:    
+            config_file_content+=f"""
+                    <additional-files value="additional_{uuid_simulation}.add.xml, closedEdge_{uuid_simulation}.add.xml"/>"""
+        else:
+            config_file_content+=f"""
+                        <additional-files value="additional_{uuid_simulation}.add.xml"/>"""
+
+        config_file_content+=f"""</input>
+                <routing>
+                    <device.rerouting.probability value="1"/>
+                    <device.rerouting.period value="10"/>"""
+        
+        if len(banned_roads)>1:    
+            config_file_content+=f"""
+                    <weight-files value="weights_{uuid_simulation}.xml"/>"""
                 
-            print("Lanzando simulación con SUMO")
-            initial_time = time.time()
+        config_file_content+=f"""</routing> 
+                    <processing>
+                        <ignore-route-errors value="true"/>
+                        <ignore-accidents value="true"/>
+                    </processing>
+                </configuration>"""
+        
 
-            await websocket.send_json({"mensaje": "Lanzando simulación con SUMO de Pamplona.🚀"})
-            try:
-                # EJECUCION DE SUMO COMO SUBPROCESO DE PYTHON, PASANDOLE EL ARCHIVO DE CONFIGURACION QUE HEMOS CREADO ANTERIORMENTE, Y LOS PARAMETROS PARA LA SIMULACION
-                subprocess.run([
-                        sumo,
-                        "-c", config_file,
-                        "-b", "0",
-                        "-e", duration_sec,  # Simular duration_sec segundos
-                        "--emission-output.geo", "true",
-                        # "-n", net_file,
-                        # "-r", route_file,
-                        "-v", "true",
-                    ], check=True,capture_output=True, text=True)
+        print("Archivo de configuración SUMO creado correctamente", config_file)
+        with open(config_file, 'w') as f:
+            f.write(config_file_content)    
+        
+        print("Archivos de configuración SUMO generados correctamente")
+        print("Archivo de configuración SUMO: ", config_file)
 
-                await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
-                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                ruta_edgeEmissions_p = os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet")
-                if os.path.exists(ruta_edgeEmissions_p):
-                    print("Delete existing parquet file")
-                    os.remove(ruta_edgeEmissions_p)
+        if operativeSytemIsLinux==1:
+            sumo = "sumo"
+        else:
+            sumo = os.path.join(sumo_home, "bin", "sumo")  # sin GUI
+            
+        print("Lanzando simulación con SUMO")
+        initial_time = time.time()
 
-                await convertirXmlToParquet(websocket,os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet"))
-                await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones.🗄️"})   
-                
-                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                # if os.path.exists(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")):
-                #     print("Delete existing parquet file")
-                #     os.remove(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"))
+        await websocket.send_json({"mensaje": "Lanzando simulación con SUMO de Pamplona.🚀"})
+        try:
+            subprocess.run([
+                    sumo,
+                    "-c", config_file,
+                    "-b", "0",
+                    "-e", duration_sec,  # Simular duration_sec segundos
+                    "--emission-output.geo", "true",
+                    # "-n", net_file,
+                    # "-r", route_file,
+                    "-v", "true",
+                    "--device.rerouting.probability", "1",
+                    "--device.rerouting.period", "1",
+                    "--no-warnings", "true",
+                    "--ignore-route-errors", "true"
+                ], check=True,capture_output=True, text=True)
 
-                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                ruta_traffic_p = os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet")
-                if os.path.exists(ruta_traffic_p):
-                    print("Delete existing parquet file")
-                    os.remove(ruta_traffic_p)
+            await websocket.send_json({"mensaje": "Simulación con SUMO finalizada correctamente.✅"})   
+            # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+            ruta_edgeEmissions_p = os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet")
+            if os.path.exists(ruta_edgeEmissions_p):
+                print("Delete existing parquet file")
+                os.remove(ruta_edgeEmissions_p)
 
-                await convertirXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
-                
-                # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
-                # if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
-                #     print("Delete existing parquet file")
-                #     os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
+            await convertirXmlToParquet(websocket,os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet"))
+            await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones de Sancho el Fuerte.🗄️"})   
+            print(f" Fichero de edgeEmissions_{uuid_simulation}.parquet creado")
+            
+            # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+            # if os.path.exists(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml")):
+            #     print("Delete existing parquet file")
+            #     os.remove(os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"))
 
-                print(" Fichero de edgeTraffic.parquet creado")
-                await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
+            # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+            ruta_traffic_p = os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet")
+            if os.path.exists(ruta_traffic_p):
+                print("Delete existing parquet file")
+                os.remove(ruta_traffic_p)
 
-                simulation_to_postgres(f"edgeEmissions_{uuid_simulation}.parquet", f"edgeTraffic_{uuid_simulation}.parquet",sumoBD, simulation_params)
-                await websocket.send_json({"mensaje": "Datos de la simulación cargados en Postgres.🗄️"})
+            await convertirXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
+            
+            # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
+            # if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
+            #     print("Delete existing parquet file")
+            #     os.remove(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"))
 
-                final_time = time.time()
-                elapsed_time = final_time - initial_time
-                print(f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos")
-                await websocket.send_json({"mensaje": f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos"})
+            print(f" Fichero de edgeTraffic_{uuid_simulation}.parquet creado")
+            await websocket.send_json({"mensaje": "Creado fichero parquet de Tráfico de Sancho el Fuerte.🗄️"})
 
-            except Exception as e:
-                print(f"Error al ejecutar SUMO: {e}")
-                raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
+            simulation_to_postgres(f"edgeEmissions_{uuid_simulation}.parquet", f"edgeTraffic_{uuid_simulation}.parquet", sumoBD, simulation_params)
+            await websocket.send_json({"mensaje": "Datos de la simulación cargados en Postgres.🗄️"})
+
+            final_time = time.time()
+            elapsed_time = final_time - initial_time
+            print(f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos")
+            await websocket.send_json({"mensaje": f"Tiempo total de simulación y procesamiento: {elapsed_time:.2f} segundos"})
 
         except Exception as e:
-            print(f"Error en la simulación: {e}")
-            raise HTTPException(status_code=500, detail=f"Error en la simulación: {e}")
-        
-        finally:
-            print("Finalizada la simulación con SUMO")
-            await websocket.send_json({"fin_simulacion": "Finalizada la simulación con SUMO de Pamplona.✅"})
+            print(f"Error al ejecutar SUMO: {e}")
+            raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
+
+    except Exception as e:
+        print(f"Error en la simulación: {e}")
+        raise HTTPException(status_code=500, detail=f"Error en la simulación: {e}")
+    
+    finally:
+        print("Finalizada la simulación con SUMO")
+        await websocket.send_json({"fin_simulacion": "Finalizada la simulación con SUMO de Pamplona.✅"})

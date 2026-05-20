@@ -1,0 +1,39 @@
+FROM ghcr.io/linuxserver/webtop:ubuntu-xfce
+
+
+ENV SUMO_HOME=/usr/share/sumo
+ENV DEBIAN_FRONTEND=noninteractive
+ENV PYTHONPATH="$SUMO_HOME/tools"
+
+RUN  add-apt-repository ppa:sumo/stable
+RUN apt-get -y update
+# RUN echo "Instalando SUMO"
+# RUN apt-get -y install sumo sumo-doc sumo-tools
+# RUN echo "SUMO instalado correctamente"
+
+
+# RUN echo "Instalando dependencias de python"
+# RUN apt-get install -y python3 python3-pip
+
+RUN mkdir -p /tmp/output
+
+RUN echo "Copiando archivos de la red de carreteras"
+COPY ./sumo_additional_files/zona-sancho-el-fuerte.net.xml /tmp/zona-sancho-el-fuerte.net.xml
+COPY ./sumo_additional_files/zona-sancho-el-fuerte.rou.xml /tmp/zona-sancho-el-fuerte.rou.xml
+
+COPY ./sumo_additional_files/pamplona.net.xml /tmp/pamplona.net.xml
+COPY ./sumo_additional_files/additional.add.xml /tmp/additional.add.xml
+COPY ./sumo_additional_files/closedEdge.add.xml /tmp/closedEdge.add.xml
+
+# COPY ./sumo_additional_files/mapa.rou.xml /tmp/mapa.rou.xml
+COPY ./sumo_additional_files/vehicles.add.xml /tmp/vehicles.add.xml
+
+RUN echo "Archivos copiandos para SUMO"
+RUN echo "Instalando Fastapi"
+RUN pip install "fastapi[standard]"
+WORKDIR /code
+COPY ./fastapi/requirements.txt /code/requirements.txt
+RUN pip install -r /code/requirements.txt
+COPY ./fastapi/ /code/app
+
+CMD ["fastapi", "run", "app/main.py", "--host", "0.0.0.0", "--port", "8000"]

@@ -8,7 +8,7 @@ import sys
 import subprocess
 import tempfile
 import requests
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect,Request
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from typing import Optional, List, Dict
@@ -37,10 +37,10 @@ url_overpass = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
 sumo_home_windows = r"D:\Proyectos\01_SUMO"
 sumo_home_linux = "/usr/share/sumo"
 
-ruta_output_windows = r"d:\Proyectos\sumo_output\output"
+ruta_output_windows = r"C:\Proyectos\twin-sumo-output\output"
 ruta_output_linux = r"/tmp/output/"
 
-ruta_windows = r"d:\Proyectos\sumo_output\red_carreteras"
+ruta_windows = r"C:\Proyectos\twin-sumo-output\sumo_additional_files"
 ruta_linux = r"/tmp/"
 
 sumoBD=sumoClass.connectionParams("duckdb", "5432", "sumo", "admin", "admin")
@@ -62,10 +62,51 @@ def operative_system_detect():
        ruta_output= r"/tmp/output"
     else:
        sumo_home = r"D:\Proyectos\01_SUMO"
-       ruta= r"D:\Proyectos\sumo_output\red_carreteras"
+       ruta= r"D:\Proyectos\sumo_output\sumo_additional_files"
        ruta_output= r"D:\Proyectos\sumo_output\output"
 
     return operativeSytemIsLinux,sumo_home,ruta,ruta_output
+
+async def download_osm_data_overpass(bbox: sumoClass.BoundingBox, output_path: str, websocket:WebSocket):
+    """Descarga directa de Overpass API para evitar errores de osmGet.py"""
+    print("Descargando datos de OSM")
+    types_filter = "|".join(bbox.road_types)
+    print("Filtros de tipos: ", types_filter)
+    # Overpass usa el orden: south, west, north, east
+    overpass_url = url_overpass
+    # Esta query descarga solo las vías (ways) que coincidan con los tipos
+    # y también los nodos (nodes) que forman esas vías.
+    try:
+        
+        query = f"""
+        [out:xml][timeout:25];
+        (
+        way["highway"~"{types_filter}"]["access"!="private"]["motor_vehicle"!="no"]({bbox.south},{bbox.west},{bbox.north},{bbox.east});
+        (._;>;);
+        );
+        out meta;
+        """
+        headers = {
+            "User-Agent": "TrafficSim/1.0 (contacto: pmesparza@itracasa.es)"
+        }
+        print("Query de OSM: ", query)
+        response = requests.get("https://overpass-api.de/api/interpreter", params={'data': query},headers=headers)
+        if response.status_code == 200:
+            with open(output_path, "w") as f:
+                f.write(response.text)
+            await websocket.send_json({"mensaje": "Fichero de carreteras guardado correctamente. "})
+        else:
+            error_msg=f"403 Forbidden: Probablemente has hecho demasiadas solicitudes a Overpass API. Intenta de nuevo más tarde. {response.status_code} {response.text}"
+            await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + error_msg})
+            
+     
+    except Exception as e:
+        f.close()
+        await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(e) })
+        await websocket.close()
+        raise HTTPException(status_code=500, detail=str(e))
+    finally:
+        f.close()
 
 async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, websocket:WebSocket):
     """Descarga directa de Overpass API para evitar errores de osmGet.py"""
@@ -73,7 +114,7 @@ async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, webso
     types_filter = "|".join(bbox.road_types)
     print("Filtros de tipos: ", types_filter)
     # Overpass usa el orden: south, west, north, east
-    overpass_url = "https://overpass.kumi.systems/api/interpreter"
+    overpass_url = "https://overpass.private.coffee/api/interpreter"
     # Esta query descarga solo las vías (ways) que coincidan con los tipos
     # y también los nodos (nodes) que forman esas vías.
     try:
@@ -88,9 +129,9 @@ async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, webso
         print("Query de OSM: ", query)
         response = requests.get(overpass_url, params={'data': query})
         if response.status_code == 200:
-            with open(output_path, "wb") as f:
-                f.write(response.content)
-            await websocket.send_json({"mensaje": "Error guardar fichero carreteras "})
+            with open(output_path, "w") as f:
+                f.writelines(response.content.decode("utf-8"))
+            await websocket.send_json({"mensaje": "Fichero de carreteras guardado correctamente. "})
         else:
             await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(response.status_code + " " + response.text) })
 
@@ -212,7 +253,7 @@ def parse_edge_data(xml_file: str) -> pd.DataFrame:
 
     return df
 
-async def convertirEmissionsXmlToParquet(websocket,ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
+async def convertirXmlToParquet(websocket,ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
     try:
         tree = ET.parse(ruta_emissions)
         root = tree.getroot()
@@ -259,56 +300,27 @@ async def convertirEmissionsXmlToParquet(websocket,ruta_emissions,ruta_parquet,r
         print(f"Error al ejecutar SUMO: {e}")
         raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
 
-async def convertirTrafficXmlToParquet(websocket,ruta_emissions,ruta_parquet,rootLabel='interval',nestLabel='edge'):
-    try:
-        tree = ET.parse(ruta_emissions)
-        root = tree.getroot()
-
-        lista_final = []
-
-        # 2. Recorrer cada intervalo (el padre)
-        for interval in root.findall(rootLabel):
-            # Extraemos los datos del tiempo
-            inicio = interval.get('begin')
-            fin = interval.get('end')
-            
-            # 3. Recorrer cada edge dentro de ese intervalo (el hijo)
-            for edge in interval.findall(nestLabel):
-                # Copiamos todos los atributos del edge (id, CO2, fuel, etc.)
-                datos_fila = edge.attrib.copy()
-                
-                # Añadimos la información del tiempo del padre a esta fila
-                datos_fila['interval_begin'] = inicio
-                datos_fila['interval_end'] = fin
-                
-                lista_final.append(datos_fila)
-
-                # 4. Crear el DataFrame
-        df = pd.DataFrame(lista_final)
-        # 5. Limpieza de datos (Crucial para Cesium y análisis)
-        # Convertimos a números lo que debe ser número
-        cols_numericas = [c for c in df.columns if c not in ['id', 'interval_begin', 'interval_end']]
-        for col in cols_numericas:
-            df[col] = pd.to_numeric(df[col], errors='coerce')
-        
-        # Aseguramos que los tiempos también sean numéricos para filtrar en el mapa
-        df['interval_begin'] = pd.to_numeric(df['interval_begin'])
-        df['interval_end'] = pd.to_numeric(df['interval_end'])
-
-        # 6. Guardar a Parquet
-        # Mantenemos el 'id' intacto para que Cesium pueda hacer el JOIN con tu red .js o .geojson
-        df.to_parquet(ruta_parquet, engine='pyarrow', index=False)
-        
-        print(f"Éxito: Se han procesado {len(df)} registros de edges.")
-        await websocket.send_json({"mensaje": f"Éxito: Se han procesado {len(df)} registros de edges de trafico.✅"})
-    except Exception as e:
-        print(f"Error al ejecutar SUMO: {e}")
-        raise HTTPException(status_code=500, detail=f"Error al ejecutar SUMO: {e}")
-
 #---------------------------------------------------------------------------------------------------------
 @app.get("/")
 async def root():
     return {"status": "ok"}
+
+@app.get("/status")
+async def status():
+    return {"status": "ok"}
+
+@app.get("/health")
+async def health():
+    return {"status": "ok, servidor funcionando correctamente"}
+
+@app.get("/info")
+def info(request: Request):
+    return {
+        "ip_real":   request.headers.get("X-Real-IP"),
+        "forwarded": request.headers.get("X-Forwarded-For"),
+        "proto":     request.headers.get("X-Forwarded-Proto"),
+        "host":      request.headers.get("Host")
+    }
 
 @app.websocket("/ws/status")
 async def websocket_status(websocket: WebSocket):
@@ -672,7 +684,7 @@ async def simulationEmissions(websocket: WebSocket):
                 ], check=True)  
 
             if operativeSytemIsLinux==1:
-                duarouter = "duarouter"
+                duarouter = os.path.join(sumo_home, "bin", "duarouter")
             else:
                 duarouter = os.path.join(sumo_home, "bin", "duarouter")  # sin G
 
@@ -872,7 +884,7 @@ async def simulationEmissions(websocket: WebSocket):
                     print("Delete existing parquet file")
                     os.remove(ruta_edgeEmissions_p)
 
-                await convertirEmissionsXmlToParquet(websocket,os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet"))
+                await convertirXmlToParquet(websocket,os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeEmissions_{uuid_simulation}.parquet"))
                 await websocket.send_json({"mensaje": "Creado fichero parquet de Emisiones de Sancho el Fuerte.🗄️"})   
                 print(f" Fichero de edgeEmissions_{uuid_simulation}.parquet creado")
                 
@@ -887,7 +899,7 @@ async def simulationEmissions(websocket: WebSocket):
                     print("Delete existing parquet file")
                     os.remove(ruta_traffic_p)
 
-                await convertirTrafficXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
+                await convertirXmlToParquet(websocket, os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml"),os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.parquet"))
                 
                 # SI EL FICHERO EXISTE, LO BORRA PARA EVITAR PROBLEMAS DE PARSEO
                 # if os.path.exists(os.path.join(ruta_output, f"edgeTraffic_{uuid_simulation}.xml")):
@@ -933,7 +945,7 @@ async def getRoadsSanchoElFuerte(websocket: WebSocket):
     if operativeSytemIsLinux==0:
         net_file = "/tmp/zona-sancho-el-fuerte.net.xml"
     else:
-        net_file = ruta_windows + r"\zona-sancho-el-fuerte.net.xml"
+        net_file = r"C:\Proyectos\twin-sumo-output\sumo_additional_files\zona-sancho-el-fuerte.net.xml"
 
     await websocket.send_json({"mensaje": "Iniciando descarga de red de Sancho el fuerte."})
     try:
@@ -1040,6 +1052,52 @@ def getSanchoStreets():
         "type": "FeatureCollection",
         "features": features
     }
+
+@app.get("/getNavarraRoads")
+def getNavarraRoads():
+    
+    road_types = ["highway.motorway", "highway.motorway_link","highway.motorway_junction", "highway.primary", "highway.secondary", "highway.tertiary", "highway.residential", "highway.living_street","highway.trunk","highway.trunk_link", "highway.primary_link", "highway.secondary_link", "highway.tertiary_link","highway.service","highway.trafficlight"]
+    operativeSytemIsLinux= 1 if platform.system()=="Linux" else 0
+    if operativeSytemIsLinux==1:
+       ruta_output= ruta_output_linux
+       net_file = os.path.join(ruta_linux, "navarra.net.xml")
+    else:
+       ruta_output= ruta_output_windows
+       net_file = os.path.join(ruta_windows, "navarra.net.xml")
+
+    net = sumolib.net.readNet(net_file)
+    # 1. Leer el parquet (ajusta la ruta a tu archivo)    # 4. Crear el JSON final con geometría y datos de tráfico
+    features = []
+    for edge in net.getEdges():
+        tipo=edge.getType()
+        if edge.getType() not in road_types:
+            continue
+        shape = edge.getShape()
+        coords = [net.convertXY2LonLat(x, y) for x, y in shape]
+
+        properties = {
+            "id": edge.getID(),
+            "nombre": edge.getName() or "Calle sin nombre",
+            "tipo": edge.getType(),
+            "velocidad_max": edge.getSpeed() * 3.6, # Convertir m/s a km/h
+            "carriles": edge.getLaneNumber(),
+        }
+        
+        feature = {
+            "type": "Feature",
+            "geometry": {
+                "type": "LineString",
+                "coordinates": coords
+            },
+            "properties": properties
+        }
+        features.append(feature)
+    
+    return {
+        "type": "FeatureCollection",
+        "features": features
+    }
+
 
 @app.get("/get-emission-data")
 def get_emission_data():
@@ -1386,6 +1444,7 @@ async def websocket_simulation(websocket: WebSocket):
                 "--osm-files", osm_file,
                 "--output-file", net_file,
                 "--geometry.remove", "true",
+                "--speed-in-kmh", "true",
                 "--proj.utm", "true",
                 "--keep-edges.by-type", sumo_types, # <--- Mantiene solo estos tipos
                 "--remove-edges.isolated", "true"
@@ -1947,6 +2006,45 @@ async def get_carriles_geojson():
     cur.close()
     conn.close()
     return resultado
+
+@app.get("/carreterasNavarra")
+async def get_carriles_geojson():
+    # Esta query de PostGIS es la forma más rápida de generar un GeoJSON
+    query = """
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(features.feature)
+        )
+        FROM (
+          SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         lane_id,
+            'max_speed', velocidad_max,
+            'geometry',   ST_AsGeoJSON(geom)::jsonb,
+            'properties', jsonb_build_object(
+                'id', lane_id,
+                'index', indice_carril,
+                'max_speed', velocidad_max,
+                'width', ancho,
+                'permission', permisos,
+                'calle_id', edge_id
+            )
+          ) AS feature
+          FROM carriles_navarra
+        ) AS features;
+    """
+    print("Ejecutando query para obtener carriles de Navarra en GeoJSON")
+    print("Query:", query)
+    # Ejecuta la query en tu conexión de base de datos y devuelve el resultado
+    conn = psycopg2.connect("host=duckdb port=5432 dbname=sumo user=admin password=admin")
+    cur = conn.cursor()
+    cur.execute(query)
+    resultado = cur.fetchone()[0]
+    cur.close()
+    conn.close()
+    return resultado
+
+
 
 @app.get("/nodosPamplona")
 async def get_nodos_geojson():

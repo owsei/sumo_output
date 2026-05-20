@@ -22,7 +22,7 @@ services:
       - ./output:/tmp/output
     networks:
       - sumo_network
-  
+
   nginx_server:
     hostname: nginx
     container_name: nginx
@@ -74,12 +74,6 @@ services:
       PGRST_DB_ANON_ROLE: web_anon
     depends_on:
       - duckdb
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.postgrest.rule=Host(`db.postrest.localhost`)"
-      - "traefik.http.routers.postgrest.entrypoints=web"
-      # PostgREST suele usar el puerto 3000 por defecto
-      - "traefik.http.services.postgrest.loadbalancer.server.port=3000"
     networks:
       - sumo_network
 
@@ -95,25 +89,6 @@ services:
     #   - "traefik.http.routers.swagger.rule=Host(`swagger.localhost`)"
     environment:
       API_URL: http://localhost:3000/
-    networks:
-      - sumo_network
-
-  # docker-compose.yml
-  traefik:
-    image: traefik:v3.6
-    hostname: traefik
-    container_name: traefik
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.network=proxy"
-      - "--providers.docker.exposedbydefault=false" # Por seguridad
-      - "--entrypoints.web.address=:80"
-      - "--api.insecure=true"
-    ports:
-      - "81:80"
-      - "8081:8080" # Dashboard de Traefik
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
     networks:
       - sumo_network
 

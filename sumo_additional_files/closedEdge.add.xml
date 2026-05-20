@@ -1,0 +1,11 @@
+<additional>
+                                <rerouter>
+                                    <interval begin="0" end="3604">
+                                        <closingReroute id="186765532#0.24" disallow="[all]"/>
+                                        <closingReroute id="186765532#0.196" disallow="[all]"/>
+                                        <closingReroute id="849206177#1" disallow="[all]"/>
+                                        <closingReroute id="4806288#0" disallow="[all]"/>
+                                        <closingReroute id="849206143" disallow="[all]"/>
+                                        <closingReroute id="849206144#2" disallow="[all]"/></interval>
+                                </rerouter>
+                            </additional>
