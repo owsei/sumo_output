@@ -1,0 +1,13 @@
+python C:\Proyectos\01_SUMO\sumo-1.26.0\tools\edgesInDistricts.py -n navarra.net.xml -t C:\Proyectos\twin-sumo-output\sumo_additional_files\shape\polygon_taz.shp -o navarra.taz.xml
+
+polyconvert -n navarra.net.xml --shapefile-prefix navarra_taz --shapefile.traditional-axis-mapping -o navarra_polygon_taz.poly.xmlpolyconvert --shapefile-prefix polygon_taz --shapefile.traditional-axis-mapping -o polygon_taz.poly.xml
+
+python C:\Proyectos\01_SUMO\sumo-1.26.0\tools\edgesInDistricts.py -n navarra.net.xml -t polygon_taz.poly.xml -o navarra.taz.xml
+
+python C:\Proyectos\01_SUMO\sumo-1.26.0\tools\edgesInDistricts.py -n C:\Proyectos\twin-sumo-output\sumo_additional_files\navarra.net.xml -t polygon_taz.poly.xml -o navarra.taz.xml
+
+
+python C:\Proyectos\01_SUMO\sumo-1.26.0\bin\od2trips -n C:\Proyectos\twin-sumo-output\sumo_additional_files\navarra.net.xml -t polygon_taz.poly.xml -o navarra.taz.xml
+
+
+C:\Proyectos\01_SUMO\sumo-1.26.0\bin\od2trips -n navarra.net.xml -d navarra_od.xml  --taz-files C:\Proyectos\twin-sumo-output\sumo_additional_files\shape\navarra.taz.xml -o navarra.trips.xml
