@@ -114,7 +114,7 @@ async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, webso
     types_filter = "|".join(bbox.road_types)
     print("Filtros de tipos: ", types_filter)
     # Overpass usa el orden: south, west, north, east
-    overpass_url = "https://overpass.private.coffee/api/interpreter"
+    overpass_url = "https://maps.mail.ru/osm/tools/overpass/api/interpreter"
     # Esta query descarga solo las vías (ways) que coincidan con los tipos
     # y también los nodos (nodes) que forman esas vías.
     try:
@@ -129,14 +129,14 @@ async def download_osm_data(bbox: sumoClass.BoundingBox, output_path: str, webso
         print("Query de OSM: ", query)
         response = requests.get(overpass_url, params={'data': query})
         if response.status_code == 200:
-            with open(output_path, "w") as f:
-                f.writelines(response.content.decode("utf-8"))
+            with open(output_path, "w", encoding="utf-8") as f:
+                f.writelines(response.text)
             await websocket.send_json({"mensaje": "Fichero de carreteras guardado correctamente. "})
         else:
-            await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(response.status_code + " " + response.text) })
+            await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:"})
 
     except Exception as e:
-        await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:" + str(e) })
+        await websocket.send_json({"mensaje": "Error en la descarga de carreteras 🚨:"})
         await websocket.close()
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -1775,7 +1775,7 @@ async def get_roads_websocket(websocket: WebSocket):
     
     sumo_home = os.environ.get("SUMO_HOME")
     if not sumo_home:
-        sumo_home = r"D:\Proyectos\01_SUMO"
+        sumo_home = r"c:\Proyectos\01_SUMO"
 
     print("Ruta de SUMO encontrada correctamente", sumo_home)
     with tempfile.TemporaryDirectory() as tmpdir:
